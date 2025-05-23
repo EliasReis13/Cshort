@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "../../include/keywords.h"
 
-#define TABLE_SIZE 31 
+#define TABLE_SIZE 31 // Número primo para evitar colisões
 
 typedef struct Entry {
     char *keyword;
