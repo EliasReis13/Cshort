@@ -3,6 +3,8 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
+
+#include "keywords.h"
 #include "../../include/lexer.h"
 #include "../../../include/lexer.h"
 
@@ -31,13 +33,6 @@ static void advance(){
         column++;
     }
     current_char = fgetc(source);
-}
-
-static int is_keyword(const char *lexeme) {
-    const char *keywords[] = {
-        "int", "char", "float", "bool", "void", "if", "else", "for", "while", "return"
-    };
-    return 0;
 }
 
 Token next_token() {
