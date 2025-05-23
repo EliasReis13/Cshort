@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "../include/lexer.h"
-#include "../include/keywords.h"
+#include "../include/keywords.h" // Tabela hash de palavras-chave
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
     } while (token.type != TOKEN_EOF);
 
     close_lexer(); // Fecha o lexer
-
+    free_keywords(); // Libera a memória da hash table de palavras-chave
+    
     return 0;
 }
