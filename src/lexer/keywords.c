@@ -51,3 +51,16 @@ int is_keyword(const char *lexeme) {
     }
     return 0;
 }
+
+void_free_keywords() {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        Entry *e = table[i];
+        while (e) {
+            Entry *next = e->next;
+            free(e->keyword);
+            free(e);
+            e = next;
+        }
+        table[i] = NULL;
+    }
+}
