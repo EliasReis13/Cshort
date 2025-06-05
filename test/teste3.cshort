@@ -1,0 +1,21 @@
+int numeros[5];
+
+bool verificarMaior(int x) {
+    return x >= 10 && x != 15;
+}
+
+void loopTest() {
+    int i;
+    for (i = 0; i < 5; i = i + 1) {
+        numeros[i] = i * 2;
+    }
+
+    while (i > 0) {
+        i = i - 1;
+        if (verificarMaior(numeros[i])) {
+            break;
+        } else {
+            continue;
+        }
+    }
+}

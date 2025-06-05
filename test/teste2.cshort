@@ -1,0 +1,16 @@
+int soma(int a, int b) {
+    return a + b;
+}
+
+void principal() {
+    int resultado = soma(3, 4);
+    char letra = 'Z';
+    string texto = "Resultado calculado";
+
+    if (resultado > 5) {
+        /* Isso é um comentário */
+        resultado = resultado - 1;
+    } else {
+        resultado = 0;
+    }
+}
