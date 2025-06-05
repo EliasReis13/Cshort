@@ -1,5 +1,5 @@
 @echo off
-echo Compilando analisador lwxico com GCC...
+echo Compilando analisador lexico com GCC...
 
 gcc anaLex.c main.c -o anaLexTest.exe -Wall -Wextra
 
