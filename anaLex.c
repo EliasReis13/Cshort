@@ -1,4 +1,3 @@
-
 #include <stdbool.h>
 #include <stdio.h>     // printf, fprintf, FILE, etc.
 #include <stdlib.h>    // exit, atoi, atof
@@ -9,21 +8,25 @@
 
 int contLinha = 1; // Contador global de linhas
 
+// Exibe mensagem de erro léxico e encerra a execução
 void errorLexico(char msg[]) {
     printf("\n\nErro lexico na linha %d: %s\n", contLinha, msg);
     exit(1);
 }
 
+// Verifica se caractere é um dígito (0-9)
 bool is_digit(char c) {
     return c >= '0' && c <= '9';
 }
 
+// Verifica se caractere é uma letra (a-z, A-Z) ou underscore (_)
 bool is_letter(char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
            (c == '_');
 }
 
+// Retorna o código da palavra reservada, ou 0 se não for reservada
 static int reconhecerPalavraReservada(char lexema[]) {
     if (strcmp(lexema, "if") == 0)       return PR_IF;
     if (strcmp(lexema, "else") == 0)     return PR_ELSE;
@@ -39,23 +42,27 @@ static int reconhecerPalavraReservada(char lexema[]) {
     return 0;
 }
 
+/*
+ * Função principal do analisador léxico.
+ * Recebe um ponteiro para arquivo fonte e retorna o próximo token reconhecido.
+ */
 TOKEN AnaLex(FILE *fd) {
     TOKEN token;
     int state = 0;
-    char lexema[TAM_MAX_LEXEMA];
-    char digitos_int[TAM_NUM];
-    char digitos_real[TAM_NUM];
+    char lexema[TAM_MAX_LEXEMA];      // Buffer para identificadores e strings
+    char digitos_int[TAM_NUM];        // Buffer para dígitos de inteiros
+    char digitos_real[TAM_NUM];       // Buffer para dígitos da parte fracionária
     int tamanho_digito = 0;
     int tamanho_digito_real = 0;
     int c, next;
     int i = 0;
 
-    // Loop principal: continua até retornar um token
+    // Loop principal: processa o arquivo até encontrar e retornar um token
     while (true) {
         switch (state) {
 
             /***********************************/
-            /* Estado 0: aguarda início do token */
+            /* Estado 0: início de um novo token */
             /***********************************/
             case 0:
                 c = fgetc(fd);
@@ -64,38 +71,38 @@ TOKEN AnaLex(FILE *fd) {
                     return token;
                 }
                 if (c == '\n') {
-                    contLinha++;
+                    contLinha++;      // Conta linhas
                     state = 0;
                     break;
                 }
-                if (isspace(c)) {
+                if (isspace(c)) {     // Ignora espaços em branco
                     state = 0;
                     break;
                 }
-                if (is_letter(c)) {
+                if (is_letter(c)) {   // Início de identificador ou palavra reservada
                     i = 0;
                     lexema[i++] = (char)c;
                     state = 1;
                     break;
                 }
-                if (is_digit(c)) {
+                if (is_digit(c)) {    // Início de constante inteira
                     tamanho_digito = 0;
                     digitos_int[tamanho_digito++] = (char)c;
                     state = 2;
                     break;
                 }
-                if (c == '\'') {
+                if (c == '\'') {      // Início de literal de char
                     state = 5;
                     break;
                 }
-                if (c == '\"') {
+                if (c == '\"') {      // Início de literal de string
                     state = 6;
                     break;
                 }
-                if (c == '/') {
+                if (c == '/') {       // Comentário de bloco ou operador divisão
                     next = fgetc(fd);
                     if (next == '*') {
-                        state = 15;
+                        state = 15;   // Comentário de bloco
                         break;
                     } else {
                         ungetc(next, fd);
@@ -104,6 +111,7 @@ TOKEN AnaLex(FILE *fd) {
                         return token;
                     }
                 }
+                // Operadores relacionais e lógicos
                 if (c == '<') {
                     lexema[0] = '<'; i = 1;
                     state = 7;
@@ -124,7 +132,7 @@ TOKEN AnaLex(FILE *fd) {
                     state = 10;
                     break;
                 }
-                if (c == '&') {
+                if (c == '&') {       // Operador lógico &&
                     next = fgetc(fd);
                     if (next == '&') {
                         token.cat = SN;
@@ -135,7 +143,7 @@ TOKEN AnaLex(FILE *fd) {
                         errorLexico("Operador '&' isolado");
                     }
                 }
-                if (c == '|') {
+                if (c == '|') {       // Operador lógico ||
                     next = fgetc(fd);
                     if (next == '|') {
                         token.cat = SN;
@@ -146,6 +154,7 @@ TOKEN AnaLex(FILE *fd) {
                         errorLexico("Operador '|' isolado");
                     }
                 }
+                // Operadores aritméticos e símbolos
                 if (c == '+') {
                     token.cat = SN;
                     token.codigo = OP_SOMA;
@@ -200,10 +209,9 @@ TOKEN AnaLex(FILE *fd) {
                     token.cat = END_EXPRESSION;
                     return token;
                 }
-                // Caracter inválido
+                // Qualquer outro caractere é inválido
                 errorLexico("Caractere invalido");
                 break;
-
 
             /**********************************************/
             /* Estado 1: identificador ou palavra reservada */
@@ -218,7 +226,7 @@ TOKEN AnaLex(FILE *fd) {
                             // lexema muito grande: opcionalmente, chamar erro
                         }
                     } else {
-                        // fim do identificador
+                        // Fim do identificador
                         ungetc(c, fd);
                         lexema[i] = '\0';
                         int codigoPR = reconhecerPalavraReservada(lexema);
@@ -234,9 +242,8 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /******************************************/
-            /* Estado 2: constante inteira (possível real) */
+            /* Estado 2: constante inteira (ou real) */
             /******************************************/
             case 2:
                 digitos_int[tamanho_digito] = '\0';
@@ -249,12 +256,12 @@ TOKEN AnaLex(FILE *fd) {
                         // overflow
                     }
                 }
-                else if (c == '.') {
+                else if (c == '.') {  // Possível constante real
                     tamanho_digito_real = 0;
                     state = 3;
                 }
                 else {
-                    // termina inteiro
+                    // Fim do inteiro
                     ungetc(c, fd);
                     digitos_int[tamanho_digito] = '\0';
                     token.cat = CT_INT;
@@ -263,9 +270,8 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /*******************************/
-            /* Estado 3: parte fracionária? */
+            /* Estado 3: parte fracionária */
             /*******************************/
             case 3:
                 c = fgetc(fd);
@@ -280,7 +286,6 @@ TOKEN AnaLex(FILE *fd) {
                     errorLexico("Constante real mal formada");
                 }
                 break;
-
 
             /********************************************/
             /* Estado 4: continua parte fracionária real */
@@ -297,7 +302,7 @@ TOKEN AnaLex(FILE *fd) {
                     }
                 }
                 else {
-                    // fim da real
+                    // Fim da constante real
                     ungetc(c, fd);
                     digitos_real[tamanho_digito_real] = '\0';
                     char buf[TAM_NUM * 2];
@@ -308,13 +313,12 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /******************************/
             /* Estado 5: literal de char */
             /******************************/
             case 5:
                 c = fgetc(fd);
-                if (c == '\\') {
+                if (c == '\\') { // Escape: '\n' ou '\0'
                     next = fgetc(fd);
                     if (next == 'n' || next == '0') {
                         c = fgetc(fd);
@@ -345,7 +349,6 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /*******************************/
             /* Estado 6: literal de string */
             /*******************************/
@@ -374,7 +377,6 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /**************************************/
             /* Estado 7: operador < ou <= */
             /**************************************/
@@ -391,7 +393,6 @@ TOKEN AnaLex(FILE *fd) {
                     return token;
                 }
                 break;
-
 
             /**************************************/
             /* Estado 8: operador > ou >= */
@@ -410,7 +411,6 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /**************************************/
             /* Estado 9: operador = ou == */
             /**************************************/
@@ -427,7 +427,6 @@ TOKEN AnaLex(FILE *fd) {
                     return token;
                 }
                 break;
-
 
             /**************************************/
             /* Estado 10: operador ! ou != */
@@ -446,7 +445,6 @@ TOKEN AnaLex(FILE *fd) {
                 }
                 break;
 
-
             /**************************************/
             /* Estado 15: comentário de bloco */ 
             /**************************************/
@@ -462,16 +460,16 @@ TOKEN AnaLex(FILE *fd) {
                     if (c == '*') {
                         next = fgetc(fd);
                         if (next == '/') {
-                            // fim do comentário: volta ao estado 0
+                            // Fim do comentário: volta ao estado 0
                             state = 0;
                             break;
                         } else {
                             ungetc(next, fd);
-                            // continua dentro do comentário
+                            // Continua dentro do comentário
                             state = 15;
                         }
                     }
-                    // senão, continua dentro do comentário
+                    // Continua dentro do comentário
                 }
                 break;
 
@@ -479,9 +477,8 @@ TOKEN AnaLex(FILE *fd) {
                 errorLexico("Estado inesperado no analisador lexico");
                 break;
         }
-        // fim do switch(state)
-        // se não retornamos token, voltamos ao topo do while(true) e
-        // consultamos o case(state) atualizado (em geral, state=0 após comentário)
+        // Fim do switch(state)
+        // Se não retornou token, volta ao topo do while(true)
     }
-    // fim do while(true)
+    // Fim do while(true)
 }
