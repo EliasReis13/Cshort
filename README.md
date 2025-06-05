@@ -1,6 +1,8 @@
-# 🔍 Analisador Léxico da Linguagem Cshort
+# 🔍 Compilador da Linguagem Cshort
 
-Este projeto implementa um **analisador léxico** para a linguagem fictícia **Cshort**, conforme especificação descrita no documento `Especificação Cshort-v1.0.pdf`.
+Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme especificação descrita no documento `Especificação Cshort-v1.0.pdf`.
+
+Atualmente, está implementada a **fase de análise léxica**, responsável por identificar os tokens válidos de um programa escrito em Cshort.
 
 ## 📚 Sobre a Linguagem Cshort
 
