@@ -1,8 +1,0 @@
-int a;
-a = 10;
-char c = 'x';
-float pi = 3.14;
-string s = "texto";
-if (a > 5) {
-    return;
-}
