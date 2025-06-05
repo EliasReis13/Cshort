@@ -51,31 +51,51 @@ TOKEN AnaLex(FILE *fd){
 
         switch (state){
             case 0:
+                c = fgetc(fd);
                 if (c == EOF) {
                     token.cat = END_FILE;
                     return token;
                 }
-                if (isspace(c)) {
+                if (c == '\n') {
+                    contLinha++;
                     state = 0;
+                    break;
                 }
-                else if (is_letter(c)) {
+                if (isspace(c)) {
+                    // ignora espaços, tabs, etc.
+                    state = 0;
+                    break;
+                }
+                if (is_letter(c)) {
+                    // começa identificador ou palavra reservada
+                    i = 0;
                     lexema[i++] = (char)c;
                     state = 1;
+                    break;
                 }
-                else if (is_digit(c)) {
+                if (is_digit(c)) {
+                    // começa constante inteira ou real
+                    tamanho_digito = 0;
                     digitos_int[tamanho_digito++] = (char)c;
                     state = 2;
+                    break;
                 }
-                else if (c == '\'') {
+                if (c == '\'') {
+                    // começa literal de caractere
                     state = 5;
+                    break;
                 }
-                else if (c == '\"') {
+                if (c == '\"') {
+                    // começa literal de string
                     state = 6;
+                    break;
                 }
-                else if (c == '/') {
+                if (c == '/') {
                     next = fgetc(fd);
                     if (next == '*') {
+                        // comentário
                         state = 15;
+                        break;
                     } else {
                         ungetc(next, fd);
                         token.cat = SN;
@@ -83,23 +103,27 @@ TOKEN AnaLex(FILE *fd){
                         return token;
                     }
                 }
-                else if (c == '<') {
-                    lexema[i++] = (char)c;
+                if (c == '<') {
+                    lexema[0] = '<'; i = 1;
                     state = 7;
+                    break;
                 }
-                else if (c == '>') {
-                    lexema[i++] = (char)c;
+                if (c == '>') {
+                    lexema[0] = '>'; i = 1;
                     state = 8;
+                    break;
                 }
-                else if (c == '=') {
-                    lexema[i++] = (char)c;
+                if (c == '=') {
+                    lexema[0] = '='; i = 1;
                     state = 9;
+                    break;
                 }
-                else if (c == '!') {
-                    lexema[i++] = (char)c;
+                if (c == '!') {
+                    lexema[0] = '!'; i = 1;
                     state = 10;
+                    break;
                 }
-                else if (c == '&') {
+                if (c == '&') {
                     next = fgetc(fd);
                     if (next == '&') {
                         token.cat = SN;
@@ -110,7 +134,7 @@ TOKEN AnaLex(FILE *fd){
                         errorLexico("Operador '&' isolado");
                     }
                 }
-                else if (c == '|') {
+                if (c == '|') {
                     next = fgetc(fd);
                     if (next == '|') {
                         token.cat = SN;
@@ -121,62 +145,159 @@ TOKEN AnaLex(FILE *fd){
                         errorLexico("Operador '|' isolado");
                     }
                 }
-                else if (c == '+') {
+                if (c == '+') {
                     token.cat = SN;
                     token.codigo = OP_SOMA;
                     return token;
                 }
-                else if (c == '-') {
+                if (c == '-') {
                     token.cat = SN;
                     token.codigo = OP_SUBTRACAO;
                     return token;
                 }
-                else if (c == '*') {
+                if (c == '*') {
                     token.cat = SN;
                     token.codigo = OP_MULTIPLICACAO;
                     return token;
                 }
-                else if (c == '(') {
+                if (c == '(') {
                     token.cat = SN;
                     token.codigo = ABRE_PARENTESES;
                     return token;
                 }
-                else if (c == ')') {
+                if (c == ')') {
                     token.cat = SN;
                     token.codigo = FECHA_PARENTESES;
                     return token;
                 }
-                else if (c == '[') {
+                if (c == '[') {
                     token.cat = SN;
                     token.codigo = ABRE_COLCHETE;
                     return token;
                 }
-                else if (c == ']') {
+                if (c == ']') {
                     token.cat = SN;
                     token.codigo = FECHA_COLCHETE;
                     return token;
                 }
-                else if (c == '{') {
+                if (c == '{') {
                     token.cat = SN;
                     token.codigo = ABRE_CHAVE;
                     return token;
                 }
-                else if (c == '}') {
+                if (c == '}') {
                     token.cat = SN;
                     token.codigo = FECHA_CHAVE;
                     return token;
                 }
-                else if (c == ',') {
+                if (c == ',') {
                     token.cat = SN;
                     token.codigo = VIRGULA;
                     return token;
                 }
-                else if (c == ';') {
+                if (c == ';') {
                     token.cat = END_EXPRESSION;
                     return token;
                 }
+                // se não casou nada:
+                errorLexico("Caractere inválido");
+                break;
+
+
+            case 1: // Reconhecendo identificadores ou palavras reservadas
+                while (true) {
+                    c = fgetc(fd);
+                    if (is_letter(c) || is_digit(c)) {
+                        if (i < TAM_MAX_LEXEMA - 1) {
+                            lexema[i++] = (char)c;
+                        } else {
+                            errorLexico("Lexema muito longo");
+                        }
+        
+                    } else {
+                        ungetc(c, fd); // Coloca o caractere de volta no buffer
+                        lexema[i] = '\0'; // Termina o lexema
+                        
+                        int codigoPR = reconhecerPalavraReservada(lexema);
+
+                        if (codigoPR) {
+                            token.cat = RESERVED_WORD;
+                            token.codigo = codigoPR;
+                        } else {
+                            token.cat = ID;
+                            strcpy(token.lexema, lexema);
+                        }
+                        return token;
+                    }
+                }
+                break;
+
+            case 2: // Reconhecendo Número Inteiro ou Real
+                digitos_int[tamanho_digito++] = '\0';
+                c = fgetc(fd);
+
+                if (is_digit(c)) {
+
+                    if (tamanho_digito < TAM_NUM - 1) {
+                        digitos_int[tamanho_digito++] = (char)c;
+                        state = 2; 
+                    } else {
+                        errorLexico("Número inteiro muito longo");
+                    }
+                }
+                else if (c == '.') {
+                    tamanho_digito_real = 0;
+                    state = 3;
+                }
+
                 else {
-                    errorLexico("Caractere inválido");
+                    ungetc(c, fd); // Coloca o caractere de volta no buffer
+                    digitos_int[tamanho_digito] = '\0'; // Termina o número inteiro
+                    token.cat = CT_INT;
+                    token.int_value = atoi(digitos_int);
+                    return token;
+                }
+                break;
+
+            case 3: // Estado após o ponto decimal: espera pelo menos um dígito
+                c = fgetc(fd);
+
+                if (is_digit(c)) {
+                    if (tamanho_digito_real < TAM_NUM - 1) {
+                        digitos_real[tamanho_digito_real++] = (char)c;
+                        state = 4;
+                    } else{
+                        //estouro
+                    }
+                    
+                } else {
+                    errorLexico("Esperava dígito após o ponto decimal");
+                }
+                break;	
+            
+            case 4: // Ler dígitos de parte fracionária
+                digitos_real[tamanho_digito_real] = '\0';
+                c = fgetc(fd);
+
+               if (is_digit(c)) {
+                    if (tamanho_digito_real < TAM_NUM - 1) {
+                        digitos_real[tamanho_digito_real++] = (char)c;
+                        state = 4;
+                    } else {
+                        // estouro
+                    }
+                }
+                
+                else{ // termina constate real
+                    ungetc(c, fd); 
+                    digitos_real[tamanho_digito_real] = '\0';
+
+                    //monta string completa: "digitos_int.digitos_real"
+                    char buf[TAM_NUM * 2];
+                    snprintf(buf, sizeof(buf), "%s.%s", digitos_int, digitos_real);
+                    token.cat = CT_REAL;
+                    token.real_value = atof(buf);
+                    return token;
                 }
                 break;
         }   
