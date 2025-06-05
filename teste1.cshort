@@ -1,0 +1,9 @@
+int x = 123;
+float y = 45.67;
+char c = 'a';
+string s = "Olá, C-short!";
+if (x < 100 && y >= 20.0) {
+    x = x + 1;
+}
+/* comentário */
+printf("oi")
