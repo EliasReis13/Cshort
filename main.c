@@ -14,7 +14,7 @@
  */
 
 int main() {
-    FILE *fd = fopen("teste1.cshort", "r"); // Abre o arquivo de entrada para leitura
+    FILE *fd = fopen("test/teste_erro1.cshort", "r"); // Abre o arquivo de entrada para leitura
     if (!fd) {
         printf("Nao consegui abrir arquivo.\n"); // Mensagem de erro se não conseguir abrir
         return 1;
