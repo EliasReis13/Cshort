@@ -6,12 +6,12 @@ echo "🔧 Compilando analisador léxico..."
 mkdir -p bin
 
 # Compila o léxico isolado
-gcc src/lex/anaLex.c src/lex/main.c -o bin/anaLexTest.exe -Wall -Wextra
+gcc src/lex/anaLex.c src/lex/main.c -o bin/cshort.exe -Wall -Wextra
 
 # Verifica se compilou com sucesso
 if [ $? -eq 0 ]; then
-    echo "✅ Compilado com sucesso: bin/anaLexTest.exe"
-    echo "▶️ Executando bin/anaLexTest.exe com teste padrão..."
+    echo "✅ Compilado com sucesso: bin/cshort.exe"
+    echo "▶️ Executando bin/cshort.exe com teste padrão..."
 
     # Executa com um arquivo de teste padrão
     ./bin/cshort.exe test/teste_erro1.cshort
