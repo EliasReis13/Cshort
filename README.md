@@ -36,12 +36,14 @@ Cshort/
 │   └── compile_lex.sh
 ├── Doc/                    # Documentação do projeto
 │   └── Especificação Cshort-v1.0.pdf
+├── out/                    # Arquivos de saída gerados pelo compilador
+│   └── tokens.txt
 ├── src/                    # Código-fonte do compilador
-│   ├── main.c
+│   ├── main.c              # Main principal do compilador
 │   └── lex/
 │       ├── anaLex.c
 │       ├── anaLex.h
-│       └── main.c
+│       └── main.c          # Main de teste do léxico
 ├── test/                   # Casos de teste da linguagem
 │   ├── teste1.cshort
 │   ├── teste2.cshort
@@ -49,7 +51,6 @@ Cshort/
 │   ├── teste_erro1.cshort
 │   ├── teste_erro2.cshort
 │   └── teste_erro3.cshort
-├── tokens.txt              # Saída dos tokens gerados
 ├── .gitignore
 └── README.md
 
@@ -69,10 +70,10 @@ Cshort/
 | `src/main.c`                     | Main geral do compilador                       |
 | `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows          |
 | `test/*.cshort`                  | Casos de teste válidos e com erros léxicos     |
-| `tokens.txt`                     | Resultado da análise léxica                    |
+| `out/tokens.txt`                 | Resultado da análise léxica                    |
 | `AFD/`                           | Representações gráficas do autômato            |
 | `Doc/Especificação Cshort...`    | Documento oficial da linguagem                 |
-| `bin/`                           | Executáveis gerados pelos scripts              |
+| `bin/`                           | Executáveis gerados pelos scripts     
 
 
 
