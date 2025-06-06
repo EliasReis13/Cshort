@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Abre arquivo de saída para gravação dos tokens reconhecidos
-    FILE *out = fopen("tokens.txt", "w");
+    FILE *out = fopen("out/tokens.txt", "w");
     if (!out) {
         printf("Erro ao abrir tokens.txt\n");
         return 1;
