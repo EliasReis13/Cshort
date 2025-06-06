@@ -2,20 +2,20 @@
 
 Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme especificação descrita no documento `Especificação Cshort-v1.0.pdf`.
 
-Atualmente, está implementada a **fase de análise léxica**, responsável por identificar os tokens válidos de um programa escrito em Cshort.
+Atualmente, está implementada a **fase de análise léxica**, responsável por identificar os tokens válidos em um programa escrito em Cshort.
 
 ---
 
 ## 📚 Sobre a Linguagem Cshort
 
-A linguagem Cshort é uma linguagem de programação estruturada inspirada em C. Sua gramática é descrita em BNF estendida, com suporte a:
+A linguagem Cshort é uma linguagem de programação estruturada, inspirada em C. Sua especificação é baseada em uma gramática BNF estendida, com suporte a:
 
-- Tipos básicos: `int`, `float`, `char`, `bool`
+- Tipos básicos: `int`, `float`, `char`, `bool`, `string`
 - Variáveis, arrays e funções
 - Estruturas de controle: `if`, `else`, `while`, `for`
-- Operadores: aritméticos, relacionais, lógicos, atribuição
-- Literais: inteiros, reais, caracteres, strings
-- Comentários estilo C (`/* comentário */`)
+- Operadores aritméticos, relacionais, lógicos e de atribuição
+- Literais: inteiros, reais, caracteres e strings
+- Comentários multilinha estilo C: `/* comentário */`
 
 ---
 
@@ -23,23 +23,28 @@ A linguagem Cshort é uma linguagem de programação estruturada inspirada em C.
 
 ```plaintext
 Cshort/
-├── src/
-│   ├── main.c
-│   └── lex/
+├── bin/                     # Executáveis gerados
+│   ├── cshort.exe           # Compilador completo
+│   └── anaLexTest.exe       # Analisador léxico isolado
+├── build/                   # Scripts de compilação
+│   ├── compile_all.bat      # Windows - compilador completo
+│   ├── compile_lex.bat      # Windows - apenas léxico
+│   ├── compile_all.sh       # Linux/macOS - compilador completo
+│   └── compile_lex.sh       # Linux/macOS - apenas léxico
+├── src/                     # Código-fonte
+│   ├── main.c               # Ponto de entrada principal
+│   └── lex/                 # Analisador léxico
 │       ├── anaLex.c
-│       └── anaLex.h
-├── test/
+│       ├── anaLex.h
+│       └── main.c           # Main de teste para o léxico
+├── test/                    # Casos de teste da linguagem
 │   ├── teste1.cshort
+│   ├── teste2.cshort
 │   └── ... outros testes ...
-├── build/
-│   ├── compile.sh
-│   └── compile.bat
-├── bin/
-│   └── anaLexTest.exe
-├── out/
-│   └── tokens.txt
+├── tokens.txt               # Saída gerada com os tokens reconhecidos
 ├── README.md
 └── Especificação Cshort-v1.0.pdf
+
 ```
 
 ---
