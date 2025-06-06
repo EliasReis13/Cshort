@@ -1,21 +1,21 @@
 # 🔍 Compilador da Linguagem Cshort
 
-Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme especificação descrita no documento `Especificação Cshort-v1.0.pdf`.
+Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme a especificação presente no documento `Especificação Cshort-v1.0.pdf`.
 
-Atualmente, está implementada a **fase de análise léxica**, responsável por identificar os tokens válidos em um programa escrito em Cshort.
+Atualmente, está concluída a **fase de análise léxica**, responsável por identificar os tokens válidos em programas escritos na linguagem Cshort.
 
 ---
 
 ## 📚 Sobre a Linguagem Cshort
 
-A linguagem Cshort é uma linguagem de programação estruturada, inspirada em C. Sua especificação é baseada em uma gramática BNF estendida, com suporte a:
+A linguagem **Cshort** é uma linguagem estruturada inspirada em C. Sua gramática é descrita em BNF estendida, e ela oferece suporte a:
 
-- Tipos básicos: `int`, `float`, `char`, `bool`, `string`
-- Variáveis, arrays e funções
-- Estruturas de controle: `if`, `else`, `while`, `for`
+- Tipos primitivos: `int`, `float`, `char`, `bool`, `string`
+- Declarações de variáveis, vetores e funções
+- Controle de fluxo: `if`, `else`, `while`, `for`
 - Operadores aritméticos, relacionais, lógicos e de atribuição
 - Literais: inteiros, reais, caracteres e strings
-- Comentários multilinha estilo C: `/* comentário */`
+- Comentários multilinha: `/* ... */`
 
 ---
 
@@ -23,61 +23,85 @@ A linguagem Cshort é uma linguagem de programação estruturada, inspirada em C
 
 ```plaintext
 Cshort/
-├── bin/                     # Executáveis gerados
-│   ├── cshort.exe           # Compilador completo
-│   └── anaLexTest.exe       # Analisador léxico isolado
-├── build/                   # Scripts de compilação
-│   ├── compile_all.bat      # Windows - compilador completo
-│   ├── compile_lex.bat      # Windows - apenas léxico
-│   ├── compile_all.sh       # Linux/macOS - compilador completo
-│   └── compile_lex.sh       # Linux/macOS - apenas léxico
-├── src/                     # Código-fonte
-│   ├── main.c               # Ponto de entrada principal
-│   └── lex/                 # Analisador léxico
+├── AFD/                    # Arquivos auxiliares do autômato
+│   ├── AFD.jff
+│   ├── AFD.jpg
+│   └── JFLAP7.1.jar
+├── bin/                    # Executáveis gerados
+│   └── cshort.exe
+├── build/                  # Scripts de compilação
+│   ├── compile_all.bat
+│   ├── compile_lex.bat
+│   ├── compile_all.sh
+│   └── compile_lex.sh
+├── Doc/                    # Documentação do projeto
+│   └── Especificação Cshort-v1.0.pdf
+├── src/                    # Código-fonte do compilador
+│   ├── main.c
+│   └── lex/
 │       ├── anaLex.c
 │       ├── anaLex.h
-│       └── main.c           # Main de teste para o léxico
-├── test/                    # Casos de teste da linguagem
+│       └── main.c
+├── test/                   # Casos de teste da linguagem
 │   ├── teste1.cshort
 │   ├── teste2.cshort
-│   └── ... outros testes ...
-├── tokens.txt               # Saída gerada com os tokens reconhecidos
-├── README.md
-└── Especificação Cshort-v1.0.pdf
+│   ├── teste3.cshort
+│   ├── teste_erro1.cshort
+│   ├── teste_erro2.cshort
+│   └── teste_erro3.cshort
+├── tokens.txt              # Saída dos tokens gerados
+├── .gitignore
+└── README.md
+
 
 ```
 
 ---
 
 
-## 🛠 Componentes
+## 🛠 Componentes do Projeto
 
-| Caminho                         | Descrição |
-|--------------------------------|-----------|
-| `src/lex/anaLex.c`             | Implementação do analisador léxico. |
-| `src/lex/anaLex.h`             | Definições de tokens e protótipos. |
-| `src/main.c`                   | Função principal do compilador. |
-| `test/`                        | Casos de teste `.cshort`. |
-| `build/compile.sh`             | Script de compilação para Linux/macOS. |
-| `build/compile.bat`            | Script de compilação para Windows. |
-| `out/tokens.txt`               | Saída gerada com os tokens reconhecidos. |
-| `bin/anaLexTest.exe`           | Executável gerado. |
-| `Especificação Cshort-v1.0.pdf`| Documento oficial da linguagem. 
+| Caminho                          | Descrição                                       |
+|----------------------------------|-------------------------------------------------|
+| `src/lex/anaLex.c`               | Implementação do analisador léxico             |
+| `src/lex/anaLex.h`               | Definições de tokens e protótipos              |
+| `src/lex/main.c`                 | Main de teste apenas do léxico                 |
+| `src/main.c`                     | Main geral do compilador                       |
+| `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows          |
+| `test/*.cshort`                  | Casos de teste válidos e com erros léxicos     |
+| `tokens.txt`                     | Resultado da análise léxica                    |
+| `AFD/`                           | Representações gráficas do autômato            |
+| `Doc/Especificação Cshort...`    | Documento oficial da linguagem                 |
+| `bin/`                           | Executáveis gerados pelos scripts              |
+
+
 
 ## ▶️ Como Compilar e Executar
 
-### Linux/macOS
+### 🐧 Linux/macOS
+
+#### Compilar e executar o compilador completo:
 ```bash
-chmod +x compile.sh
-./compile.sh
+./build/compile_all.sh
+```
+
+#### Compilar e executar apenas o analisador léxico isolado:
+```bash
+./build/compile_lex.sh
 ```
 
 ### 🪟 Windows
 
-Execute o arquivo `compile.bat` com um duplo clique ou via terminal (Prompt de Comando):
+#### Compilar e executar o compilador completo:
 
 ```cmd
-compile.bat
+build\compile_all.bat
+```
+
+#### Compilar e executar apenas o analisador léxico isolado:
+
+```cmd
+build\compile_lex.bat
 ```
 
 ## 🧪 Exemplo de Saída
