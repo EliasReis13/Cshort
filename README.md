@@ -4,6 +4,8 @@ Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**,
 
 Atualmente, está implementada a **fase de análise léxica**, responsável por identificar os tokens válidos de um programa escrito em Cshort.
 
+---
+
 ## 📚 Sobre a Linguagem Cshort
 
 A linguagem Cshort é uma linguagem de programação estruturada inspirada em C. Sua gramática é descrita em BNF estendida, com suporte a:
@@ -15,18 +17,47 @@ A linguagem Cshort é uma linguagem de programação estruturada inspirada em C.
 - Literais: inteiros, reais, caracteres, strings
 - Comentários estilo C (`/* comentário */`)
 
-## 🛠 Arquivos do Projeto
+---
 
-| Arquivo           | Descrição |
-|------------------|-----------|
-| `anaLex.c`       | Implementação do analisador léxico (tokenização). |
-| `anaLex.h`       | Declarações de tipos, tokens e protótipos. |
-| `main.c`         | Programa principal que utiliza o analisador léxico. |
-| `compile.sh`     | Script para compilação no Linux. |
-| `compile.bat`    | Script para compilação no Windows. |
-| `teste1.cshort`  | Arquivo de teste com código-fonte em Cshort. |
-| `tokens.txt`     | Arquivo gerado com os tokens reconhecidos (output). |
-| `Especificação Cshort-v1.0.pdf` | Documento com as regras léxicas e sintáticas da linguagem. |
+## 📁 Estrutura de Diretórios
+
+```plaintext
+Cshort/
+├── src/
+│   ├── main.c
+│   └── lex/
+│       ├── anaLex.c
+│       └── anaLex.h
+├── test/
+│   ├── teste1.cshort
+│   └── ... outros testes ...
+├── build/
+│   ├── compile.sh
+│   └── compile.bat
+├── bin/
+│   └── anaLexTest.exe
+├── out/
+│   └── tokens.txt
+├── README.md
+└── Especificação Cshort-v1.0.pdf
+```
+
+---
+
+
+## 🛠 Componentes
+
+| Caminho                         | Descrição |
+|--------------------------------|-----------|
+| `src/lex/anaLex.c`             | Implementação do analisador léxico. |
+| `src/lex/anaLex.h`             | Definições de tokens e protótipos. |
+| `src/main.c`                   | Função principal do compilador. |
+| `test/`                        | Casos de teste `.cshort`. |
+| `build/compile.sh`             | Script de compilação para Linux/macOS. |
+| `build/compile.bat`            | Script de compilação para Windows. |
+| `out/tokens.txt`               | Saída gerada com os tokens reconhecidos. |
+| `bin/anaLexTest.exe`           | Executável gerado. |
+| `Especificação Cshort-v1.0.pdf`| Documento oficial da linguagem. 
 
 ## ▶️ Como Compilar e Executar
 
