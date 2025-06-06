@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "anaLex.h"
+#include "lex/anaLex.h"
 
 /*
  * Programa principal do analisador léxico.
