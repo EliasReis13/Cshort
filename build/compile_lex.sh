@@ -3,7 +3,7 @@
 echo "🔧 Compilando analisador léxico..."
 
 # Garante que a pasta bin/ exista
-mkdir -p bin
+mkdir -p bin out
 
 # Compila o léxico isolado
 gcc src/lex/anaLex.c src/lex/main.c -o bin/cshort.exe -Wall -Wextra
