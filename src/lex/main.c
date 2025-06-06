@@ -19,7 +19,7 @@ int main() {
         printf("Nao consegui abrir arquivo.\n"); // Mensagem de erro se não conseguir abrir
         return 1;
     }
-    FILE *out = fopen("tokens.txt", "w");
+    FILE *out = fopen("out/tokens.txt", "w");
     if (!out){
         printf("Erro ao abrir tokens.txt\n");
         return 1;
