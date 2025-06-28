@@ -1,12 +1,12 @@
 @echo off
-echo Compilando o compilador completo (por enquanto, só léxico)...
+echo Compilando o compilador completo (léxico e sintático)
 
 REM Cria a pasta bin se não existir
 if not exist bin mkdir bin
 if not exist out mkdir out
 
-REM Compila o analisador léxico + main geral (caminhos relativos à raiz)
-gcc src\lex\anaLex.c src\main.c -o bin\cshort.exe -Wall -Wextra
+REM Compila o analisador léxico + sintático + main.c geral
+gcc src\lex\anaLex.c src\sint\anaSint.c src\sint\main.c -o bin\cshort.exe -Wall -Wextra
 
 if %errorlevel% equ 0 (
     echo ✅ Compilado com sucesso: bin\cshort.exe
