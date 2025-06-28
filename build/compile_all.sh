@@ -1,12 +1,13 @@
 #!/bin/bash
 
-echo "🔧 Compilando o compilador completo (por enquanto, só léxico)..."
+echo "🔧 Compilando o compilador completo (léxico e sintático) "
 
-# Garante que a pasta bin/ exista
-mkdir -p bin out
+# Cria pastas se não existirem
+mkdir -p bin
+mkdir -p out
 
-# Compila o analisador léxico + main central
-gcc src/lex/anaLex.c src/main.c -o bin/cshort.exe -Wall -Wextra
+# Compila usando gcc
+gcc src/lex/anaLex.c src/sint/anaSint.c src/sint/main.c -o bin/cshort.out -Wall -Wextra
 
 # Verifica se compilou com sucesso
 if [ $? -eq 0 ]; then
