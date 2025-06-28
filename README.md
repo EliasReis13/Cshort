@@ -136,6 +136,20 @@ A saída será semalhante a:
 <EOF>
 ```
 
+## ✅ Componentes
+
+### Analisador Léxico
+
+- Caminho: `src/lex/anaLex.c`
+- Entrada: arquivo `.cshort`
+- Saída: tokens categorizados (ID, palavras reservadas, operadores, literais...)
+
+### Analisador Sintático
+
+- Caminho: src/sint/anaSint.c ou anaSint_expandido.c
+- Entrada: sequência de tokens
+- Saída: árvore sintática com identação
+
 ## ⚙️ Funcionalidades do Analisador
 
 - Reconhecimento de:
