@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "lex/anaLex.h"
+#include "sint/anaSint.h"
 
 /*
  * Função principal do compilador Cshort.
