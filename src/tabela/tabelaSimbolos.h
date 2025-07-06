@@ -1,9 +1,7 @@
-// /tabela/tabelaSimbolos.h
-
 #ifndef TABELA_SIMBOLOS_H
 #define TABELA_SIMBOLOS_H
 
-#include "../lex/anaLex.h" // Dependência para a estrutura TOKEN e tipos (PR_INT, etc.)
+#include "../lex/anaLex.h"
 
 #define TAM_TABELA 100
 
@@ -18,7 +16,7 @@ typedef enum {
 // Estrutura para informações da função
 typedef struct {
     int num_parametros;
-    int tipos_parametros[10]; // Supondo no máximo 10 parâmetros
+    int tipos_parametros[10]; 
 } FuncInfo;
 
 // Estrutura de um símbolo na tabela
@@ -31,7 +29,6 @@ typedef struct {
 
     union {
         FuncInfo func;
-        // Outras informações podem ser adicionadas aqui
     } info;
 
 } SIMBOLO;

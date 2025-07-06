@@ -1,13 +1,9 @@
-// Arquivo: src/tabela/tabelaSimbolos.c
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include "tabelaSimbolos.h"
 
-// É necessário ter acesso a estas variáveis globais para registrar erros.
-// Certifique-se de que elas estejam declaradas como 'extern' em tabelaSimbolos.h ou aqui.
 extern int contLinha;
 extern bool houveErroSemantico;
 
@@ -22,7 +18,7 @@ void erro_semantico(char* msg, int linha) {
 TabelaSimbolos inicializa_tabela() {
     TabelaSimbolos ts;
     ts.tamanho = 0;
-    ts.escopo_atual = 0; // Escopo global
+    ts.escopo_atual = 0; 
     return ts;
 }
 
@@ -60,7 +56,7 @@ void insere_simbolo(TabelaSimbolos *ts, SIMBOLO s) {
         exit(1);
     }
 
-    // Verifica se já existe um símbolo com mesmo nome NO ESCOPO ATUAL
+    // Verifica se já existe um símbolo com mesmo nome no escopo atual
     if (busca_escopo_atual(ts, s.id) != NULL) {
         char msg[200];
         sprintf(msg, "Redeclaracao do identificador '%s'.", s.id);
@@ -111,7 +107,6 @@ const char* get_classe_string(Categoria cat) {
 }
 
 // Função para converter o código do tipo em uma string legível
-// Os valores (PR_INT, etc.) vêm do seu anaLex.h
 const char* get_tipo_string(int tipo) {
     switch (tipo) {
         case PR_INT:    return "Inteiro";
