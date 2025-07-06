@@ -1,5 +1,13 @@
-// Analisador Sintático Expandido para linguagem Cshort
-// VERSÃO COM TABELA DE SÍMBOLOS INTEGRADA
+/**
+ * @file anaSint.c
+ * @brief Implementação do Analisador Sintático e Semântico.
+ *
+ * @purpose
+ * Este arquivo contém a lógica completa do analisador de descida recursiva.
+ * Ele implementa as regras da gramática da linguagem Cshort e integra as
+ * ações semânticas, como o gerenciamento de escopo e a verificação de
+ * declarações, através da interação com o módulo da Tabela de Símbolos.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +15,7 @@
 #include <stdbool.h>
 #include "anaSint.h"
 #include "../lex/anaLex.h"
-#include "../tabela/tabelaSimbolos.h" // <<<--- INCLUSÃO DA TABELA DE SÍMBOLOS
+#include "../tabela/tabelaSimbolos.h"
 
 // --- Variáveis Globais ---
 FILE *fd;
@@ -15,7 +23,7 @@ TOKEN t, tLookahead;
 char TABS[200] = "";
 bool modoPanico = false;
 bool houveErroSintatico = false;
-TabelaSimbolos ts; // <<<--- TABELA DE SÍMBOLOS GLOBAL
+TabelaSimbolos ts; 
 
 // --- Protótipos de Funções Auxiliares Locais ---
 void nextToken();
@@ -29,7 +37,7 @@ void sincroniza();
 void Prog();
 DECL_SINALIZADOR Decl();
 void corpo_func();
-void Tipos_param(char* nome_funcao); // <<<--- PRECISA DO NOME DA FUNÇÃO
+void Tipos_param(char* nome_funcao); 
 void Cmd();
 void Cmd_if();
 void Cmd_while();
@@ -50,20 +58,35 @@ void Fator();
 
 // --- Implementação das Funções Auxiliares ---
 
+/**
+ * @brief Reporta um erro sintático e ativa o modo pânico.
+ * @param msg Mensagem de erro a ser exibida.
+ */
 void error(char msg[]) {
     printf("[ERRO SINTATICO | Linha %d]: %s\n", contLinha, msg);
     modoPanico = true;
     houveErroSintatico = true;
 }
 
+/**
+ * @brief Adiciona espaços para indentar a saída da árvore de análise, melhorando a visualização.
+ */
 void aumenta_ident() {
     strcat(TABS, "  ");
 }
 
+/**
+ * @brief Remove espaços da indentação ao sair de um nível da árvore de análise.
+ */
 void diminui_ident() {
     int len = strlen(TABS);
     if (len >= 2) TABS[len - 2] = '\0';
 }
+
+/**
+ * @brief Imprime um nó folha da árvore de análise sintática.
+ * @param tk O token a ser impresso.
+ */
 
 void print_folha(TOKEN tk) {
     printf("%s- ", TABS);
@@ -79,12 +102,20 @@ void print_folha(TOKEN tk) {
     }
 }
 
+/**
+ * @brief Avança para o próximo token do arquivo de entrada.
+ */
+
 void nextToken() {
     t = tLookahead;
     if (t.cat != END_FILE) {
         tLookahead = AnaLex(fd);
     }
 }
+
+/**
+ * @brief Implementa a recuperação de erro no "modo pânico".
+ */
 
 void sincroniza() {
     bool pontoEncontrado = false; 
@@ -119,6 +150,12 @@ void sincroniza() {
     modoPanico = false;
 }
 
+/**
+ * @brief Consome o token atual se ele corresponder à categoria e código esperados.
+ * @param categoria Categoria do token esperado.
+ * @param codigo Código do token esperado (relevante para SN e RESERVED_WORD).
+ */
+
 void consome(int categoria, int codigo) {
     if (modoPanico) return;
 
@@ -135,6 +172,11 @@ void consome(int categoria, int codigo) {
 
 // --- Implementação das Funções do Parser com Semântica ---
 
+/**
+ * @brief Verifica se o token atual é um tipo válido (int, float, etc.).
+ * @return int Retorna 1 se for um tipo, 0 caso contrário.
+ */
+
 int Tipo() {
     if (t.cat == RESERVED_WORD) {
         switch (t.codigo) {
@@ -149,11 +191,16 @@ int Tipo() {
     return 0;
 }
 
+/**
+ * @brief Função inicial da gramática (símbolo de partida).
+ * @purpose Orquestra a análise do programa inteiro.
+ */
+
 void Prog() {
     printf("<Prog>\n");
     aumenta_ident();
 
-    ts = inicializa_tabela(); // <<<--- INICIALIZA A TABELA DE SÍMBOLOS
+    ts = inicializa_tabela(); 
 
     tLookahead = AnaLex(fd);
     nextToken();
@@ -165,22 +212,34 @@ void Prog() {
         }
     }
 
-    imprime_tabela(ts); // <<<--- IMPRIME A TABELA NO FINAL PARA DEBUG
+    imprime_tabela(ts); 
     diminui_ident();
     printf("</Prog>\n");
 }
+
+/**
+ * @brief Analisa o corpo de uma função, que é um bloco de comandos.
+ * @note O escopo da função (para parâmetros e variáveis locais) é gerenciado aqui.
+ */
 
 void corpo_func() {
     printf("%s<corpo_func>\n", TABS);
     aumenta_ident();
     
-    abre_escopo(&ts); // <<<--- ABRE NOVO ESCOPO PARA O CORPO DA FUNÇÃO
+    abre_escopo(&ts);
     Cmd_bloco();
-    fecha_escopo(&ts); // <<<--- FECHA O ESCOPO DA FUNÇÃO
+    fecha_escopo(&ts); 
 
     diminui_ident();
     printf("%s</corpo_func>\n", TABS);
 }
+
+/**
+ * @brief Analisa uma declaração de variável, função ou protótipo.
+ * @return DECL_SINALIZADOR - Informa o tipo de declaração encontrada.
+ * @note Esta função usa lookahead para decidir o caminho da análise e realiza
+ * a inserção de novos símbolos na tabela.
+ */
 
 DECL_SINALIZADOR Decl() {
     DECL_SINALIZADOR declFlag = NO_DECL;
@@ -193,8 +252,7 @@ DECL_SINALIZADOR Decl() {
     }
 
     int tipo_declarado = t.codigo;
-    nextToken(); // Consome o tipo
-
+    nextToken(); 
     if (t.cat != ID) {
         error("Identificador esperado apos o tipo.");
         sincroniza();
@@ -202,10 +260,9 @@ DECL_SINALIZADOR Decl() {
     }
 
     char nome_id[100];
-    strcpy(nome_id, t.lexema); // <<<--- GUARDA O NOME DO ID ANTES DE CONSUMIR
+    strcpy(nome_id, t.lexema); 
 
     if (tLookahead.cat == SN && tLookahead.codigo == ABRE_PARENTESES) {
-        // --- LÓGICA SEMÂNTICA PARA FUNÇÕES ---
         SIMBOLO s;
         strcpy(s.id, nome_id);
         s.tipo = tipo_declarado;
@@ -218,19 +275,19 @@ DECL_SINALIZADOR Decl() {
 
         // Abre um escopo temporário para os parâmetros
         abre_escopo(&ts);
-        Tipos_param(nome_id); // <<<--- PASSA O NOME DA FUNÇÃO PARA REGISTRAR OS PARÂMETROS
+        Tipos_param(nome_id); 
         consome(SN, FECHA_PARENTESES);
 
         if (t.cat == SN && t.codigo == ABRE_CHAVE) {
-            declFlag = DECL_FUNC; // É uma definição de função
+            declFlag = DECL_FUNC; 
         } else {
-            declFlag = DECL_PROT; // É um protótipo
+            declFlag = DECL_PROT; 
             s.categoria = CAT_PROT; // Atualiza categoria para protótipo
-            fecha_escopo(&ts); // <<<--- FECHA O ESCOPO DOS PARÂMETROS, JÁ QUE NÃO HÁ CORPO
+            fecha_escopo(&ts); 
             consome(END_EXPRESSION, 0);
         }
     } else {
-        // --- LÓGICA SEMÂNTICA PARA VARIÁVEIS ---
+        
         declFlag = DECL_VAR;
         if (tipo_declarado == PR_VOID) {
             erro_semantico("Variaveis nao podem ser do tipo 'void'.", contLinha);
@@ -243,7 +300,6 @@ DECL_SINALIZADOR Decl() {
                 break;
             }
             
-            // --- INSERE VARIÁVEL NA TABELA ---
             SIMBOLO s;
             strcpy(s.id, t.lexema);
             s.tipo = tipo_declarado;
@@ -253,7 +309,6 @@ DECL_SINALIZADOR Decl() {
             nextToken(); // Consome o ID da variável
 
             if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
-                // Lógica de array (pode ser expandida na tabela de símbolos se necessário)
                 nextToken();
                 if (t.cat != CT_INT) error("Uma constante inteira era esperada para o tamanho do array.");
                 nextToken();
@@ -272,6 +327,11 @@ DECL_SINALIZADOR Decl() {
     return declFlag;
 }
 
+/**
+ * @brief Analisa os parâmetros na declaração de uma função.
+ * @param nome_funcao O nome da função à qual os parâmetros pertencem, para
+ * registrar as informações na tabela de símbolos.
+ */
 void Tipos_param(char* nome_funcao) {
     if (t.cat == RESERVED_WORD && t.codigo == PR_VOID) {
         if (tLookahead.cat == SN && tLookahead.codigo == FECHA_PARENTESES) {
@@ -298,10 +358,10 @@ void Tipos_param(char* nome_funcao) {
                 incrementa_num_param(&ts, nome_funcao);
                 consome(ID, 0);
             } else {
-                 // Parâmetro sem nome (comum em protótipos)
-                 strcpy(p.id, ""); // Sem nome
-                 // Não inserimos na tabela como símbolo buscável, mas contamos
-                 incrementa_num_param(&ts, nome_funcao);
+                // Parâmetro sem nome (comum em protótipos)
+                strcpy(p.id, ""); // Sem nome
+                // Não insere na tabela como símbolo buscável, mas conta
+                incrementa_num_param(&ts, nome_funcao);
             }
             
             if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
@@ -317,9 +377,13 @@ void Tipos_param(char* nome_funcao) {
     }
 }
 
-
+/**
+ * @brief Analisa um comando genérico.
+ * @note Esta função atua como um distribuidor, chamando a rotina de análise
+ * apropriada com base no token atual (if, while, {, etc.).
+ */
 void Cmd() {
-    if (Tipo()) { // Uma declaração dentro de um bloco é um comando
+    if (Tipo()) { 
         Decl();
     }
     else if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
@@ -329,15 +393,18 @@ void Cmd() {
     else if (t.cat == RESERVED_WORD && t.codigo == PR_BREAK) Cmd_break();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_CONTINUE) Cmd_continue();
     else if (t.cat == SN && t.codigo == ABRE_CHAVE) {
-        abre_escopo(&ts); // <<<--- ABRE ESCOPO PARA BLOCO GENÉRICO
+        abre_escopo(&ts);
         Cmd_bloco();
-        fecha_escopo(&ts); // <<<--- FECHA ESCOPO DO BLOCO
+        fecha_escopo(&ts); 
     }
     else {
         Expr();
         consome(END_EXPRESSION, 0);
     }
 }
+
+// --- Funções para Comandos Específicos (if, while, etc.)
+// Estas funções seguem o padrão de consumir os tokens de acordo com a regra da gramática
 
 void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
@@ -400,6 +467,9 @@ void Cmd_bloco() {
     consome(SN, FECHA_CHAVE);
 }
 
+// --- Funções para Análise de Expressões ---
+// Seguem a estrutura de precedência de operadores.
+
 void Expr() {
     Expr_atrib();
 }
@@ -452,6 +522,9 @@ void Expr_multiplicativa() {
     }
 }
 
+/**
+ * @brief Analisa um fator, o elemento mais básico de uma expressão (ID, constante, (expressão)).
+ */
 void Fator() {
     if (t.cat == SN && (t.codigo == OP_NOT || t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         consome(SN, t.codigo);
@@ -468,13 +541,13 @@ void Fator() {
         char id_usado[100];
         strcpy(id_usado, t.lexema); // Salva o nome do ID para verificações futuras
         
-        consome(ID, 0); // Consome sintaticamente o ID
+        consome(ID, 0);
 
-        if (t.cat == SN && t.codigo == ABRE_COLCHETE) { // Uso de array
+        if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
             consome(SN, ABRE_COLCHETE);
             Expr();
             consome(SN, FECHA_COLCHETE);
-        } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) { // Chamada de função
+        } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) { 
             if (s != NULL && s->categoria != CAT_FUNC && s->categoria != CAT_PROT) {
                 char msg[200];
                 sprintf(msg, "'%s' nao e uma funcao, nao pode ser chamada.", id_usado);
