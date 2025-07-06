@@ -1,0 +1,26 @@
+int g_valor;
+float PI = 3.14;
+
+// Definição de uma função sem retorno e com parâmetros
+void imprime(int valor, string msg) {
+    if (valor > 0) {
+        // Bloco de comando
+    }
+}
+
+// Função principal
+int main() {
+    int i = 0;
+    
+    // Laço while
+    while (i < 10) {
+        i = i + 1;
+    }
+    
+    // Laço for
+    for (i = 0; i < 5; i = i + 1) {
+        // corpo do for
+    }
+    
+    return 0;
+}
