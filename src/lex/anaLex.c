@@ -357,7 +357,7 @@ TOKEN AnaLex(FILE *fd) {
                 while (true) {
                     c = fgetc(fd);
                     if (c == EOF || c == '\n') {
-                        errorLexico("String não fechada");
+                        errorLexico("String nao fechada");
                     }
                     if (c == '\"') {
                         lexema[i] = '\0';
