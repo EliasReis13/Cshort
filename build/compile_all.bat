@@ -11,7 +11,7 @@ gcc src\lex\anaLex.c src\sint\anaSint.c src\sint\main.c -o bin\cshort.exe -Wall 
 if %errorlevel% equ 0 (
     echo Compilado com sucesso: bin\cshort.exe
     echo Executando bin\cshort.exe com arquivo de teste...
-    bin\cshort.exe test\teste_sintaxe_correta.cshort
+    bin\cshort.exe test\teste_com_erros.cshort
 ) else (
     echo Erro na compilacao!
 )
