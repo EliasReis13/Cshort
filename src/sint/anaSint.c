@@ -4,7 +4,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include "anaSint.h"
-#include "anaLex.h"
+#include "../lex/anaLex.h"
+
+bool modoPanico = false; // Variável para controlar a recuperação de erro
+bool houveErroSintatico = false;
 
 // --- Protótipos ---
 void Prog();
@@ -40,8 +43,9 @@ FILE *fd;
 TOKEN t;
 
 void error(char msg[]) {
-    printf("\n[ERRO]: %s\n", msg);
-    exit(1);
+    printf("[ERRO | Linha %d]: %s\n", contLinha, msg);
+    modoPanico = true; 
+    houveErroSintatico = true;
 }
 
 void aumenta_ident() {
@@ -67,13 +71,47 @@ void print_folha(TOKEN tk) {
     }
 }
 
+// Função para sincronizar o parser após um erro
+void sincroniza() {
+    // Descarta tokens até encontrar um ponto seguro para recomeçar
+    while (t.cat != END_FILE) {
+        // Pontos de sincronização: ; } ou início de um novo comando
+        if (t.cat == END_EXPRESSION) { // Ponto e vírgula
+            t = AnaLex(fd);
+            break;
+        }
+        if (t.cat == SN && t.codigo == FECHA_CHAVE) { // Fim de bloco
+            break; 
+        }
+        if (t.cat == RESERVED_WORD) {
+            switch(t.codigo) {
+                case PR_IF:
+                case PR_WHILE:
+                case PR_FOR:
+                case PR_RETURN:
+                case PR_INT:
+                case PR_FLOAT:
+                case PR_CHAR:
+                case PR_STRING:
+                    goto end_loop; // Sai dos dois laços
+            }
+        }
+        t = AnaLex(fd);
+    }
+end_loop:
+    modoPanico = false; // Desativa o modo pânico após sincronizar
+}
+
 void consome(int categoria, int codigo) {
+    if (modoPanico) return; 
+
     if (t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
         print_folha(t);
         t = AnaLex(fd);
     } else {
         char msg[200];
-        sprintf(msg, "Esperado (cat=%d, cod=%d), encontrado (cat=%d, cod=%d) na linha %d", categoria, codigo, t.cat, t.codigo, contLinha);
+        sprintf(msg, "Esperado (cat=%d, cod=%d), encontrado token '%s' (cat=%d, cod=%d)", 
+                categoria, codigo, t.lexema, t.cat, t.codigo);
         error(msg);
     }
 }
@@ -95,8 +133,13 @@ void Prog() {
     printf("<Prog>\n"); aumenta_ident();
     t = AnaLex(fd);
     while (t.cat != END_FILE) {
-        if (Tipo()) Decl_ou_Func();
-        else error("Esperado tipo no início de declaração ou função");
+        if (Tipo()) {
+            Decl_ou_Func();
+        } else {
+            error("Esperado tipo no inicio de declaracao ou funcao");
+
+            t = AnaLex(fd);
+        }
     }
     diminui_ident(); printf("</Prog>\n");
 }
@@ -141,7 +184,7 @@ void Decl() {
             print_folha(t); consome(ID, 0);
         }
         print_folha(t); consome(END_EXPRESSION, 0);
-    } else error("Esperado tipo na declaração");
+    } else error("Esperado tipo na declaracao");
 }
 
 void Tipos_param() {
@@ -221,7 +264,12 @@ void Cmd_continue() {
 
 void Cmd_bloco() {
     print_folha(t); consome(SN, ABRE_CHAVE);
-    while (!(t.cat == SN && t.codigo == FECHA_CHAVE)) {
+    while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
+        if (modoPanico) {
+            sincroniza();
+            // Após sincronizar, podemos estar no '}' final, então verificamos de novo
+            if (t.cat == SN && t.codigo == FECHA_CHAVE) break;
+        }
         Cmd();
     }
     print_folha(t); consome(SN, FECHA_CHAVE);
