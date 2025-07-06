@@ -1,10 +1,11 @@
 # 🔍 Compilador da Linguagem Cshort
 
-Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme a especificação presente no documento `Especificação Cshort-v1.0.pdf`.
+Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme as especificações presentes nos documentos `Especificação Cshort-v1.0.pdf` e `Implementação  de alguns Módulos do ASDR de Cshort.pdf`.
 
 Atualmente, estão implementadas as fases de:
 - ✅ Análise Léxica
 - ✅ Análise Sintática
+- ✅ Tabela de Símbolos
 - 🛠️ Em desenvolvimento: Análise Semântica
 
 ---
@@ -50,13 +51,14 @@ Cshort/
 │   │   ├── anaLex.c
 │   │   ├── anaLex.h
 │   │   └── main.c
-│   └── sint/               # Analisador sintático
-│       ├── anaSint.c
-│       ├── anaSint.h
-│       └── main.c
+│   ├── sint/               # Analisador sintático
+│   │   ├── anaSint.c
+│   │   ├── anaSint.h
+│   │   └── main.c
+│   └── tabela/             # Módulo de tabela de símbolos
+│       ├── tabelaSimbolos.c
+│       └── tabelaSimbolos.h
 ├── test/                   # Casos de teste da linguagem
-│   ├── teste_1.cshort
-│   ├── teste_2.cshort
 │   ├── teste_com_erros.cshort
 │   └── teste_sem_erros.cshort
 ├── .gitignore
@@ -77,13 +79,16 @@ Cshort/
 | `src/sint/anaSint.c`             | Implementação do analisador sintático          |
 | `src/sint/anaSint.h`             | Cabeçalhos do analisador sintático             |
 | `src/sint/main.c`                | Teste isolado da análise sintática             |
+| `src/tabela/tabelaSimbolos.c`    | Implementação da tabela de símbolos            |
+| `src/tabela/tabelaSimbolos.h`    | Interface da tabela de símbolos                |
 | `src/main.c`                     | Main geral do compilador                       |
 | `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows          |
 | `test/*.cshort`                  | Casos de teste válidos e com erros léxicos     |
 | `out/tokens.txt`                 | Resultado da análise léxica                    |
 | `AFD/`                           | Representações gráficas do autômato            |
-| `Doc/Especificação Cshort...`    | Documento oficial da linguagem                 |
-| `bin/`                           | Executáveis gerados pelos scripts     
+| `Doc/`                           | Documentação da linguagem                      |
+| `bin/`                           | Executáveis gerados pelos scripts              |
+| `.vscode/tasks.json`             | 	Configuração de tarefas para o VSCode         |
 
 
 
@@ -160,17 +165,27 @@ A saída será semalhante a:
 - Entrada: sequência de tokens
 - Saída: árvore sintática com identação
 
-## ⚙️ Funcionalidades do Analisador
+## ⚙️ Funcionalidades 
+
+### 🔠 Analisador Léxico
 
 - Reconhecimento de:
   - Identificadores e palavras reservadas
-  - Literais numéricos, `char` e `string`
+  - Literais (`int`, `float`, `char`, `string`)
   - Operadores e delimitadores
   - Comentários multilinha (`/* ... */`)
 - Tratamento de erros léxicos com indicação da linha
-- Geração de tokens com suas categorias e valores
+- Saída com categorias e valores dos tokens
 
+### 🧩 Analisador Sintático
 
+- Leitura da sequência de tokens
+- Construção da árvore sintática (indentada)
+- Detecção de erros de estrutura
+
+### 🗂️ Tabela de Símbolos 
+- Módulo separado
+- Interface para registrar identificadores e escopos 
 ---
 
 
