@@ -1,5 +1,5 @@
 @echo off
-echo Compilando o compilador completo (léxico e sintático)
+echo Compilando o compilador completo (lexico e sintatico)
 
 REM Cria a pasta bin se não existir
 if not exist bin mkdir bin
@@ -9,9 +9,9 @@ REM Compila o analisador léxico + sintático + main.c geral
 gcc src\lex\anaLex.c src\sint\anaSint.c src\sint\main.c -o bin\cshort.exe -Wall -Wextra
 
 if %errorlevel% equ 0 (
-    echo ✅ Compilado com sucesso: bin\cshort.exe
-    echo ▶️ Executando bin\cshort.exe com arquivo de teste...
-    bin\cshort.exe test\teste_erro1.cshort
+    echo Compilado com sucesso: bin\cshort.exe
+    echo Executando bin\cshort.exe com arquivo de teste...
+    bin\cshort.exe test\teste_sintaxe_correta.cshort
 ) else (
-    echo ❌ Erro na compilação!
+    echo Erro na compilacao!
 )
