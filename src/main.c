@@ -1,37 +1,39 @@
 #include <stdio.h>
-#include "sint/anaSint.h" 
+#include "sint/anaSint.h" // Inclui o cabeçalho do SINTÁTICO
+#include "lex/anaLex.h"   // Inclui o cabeçalho do LÉXICO
 
-FILE *fd;
-TOKEN t;
+/*
+ * Programa principal que executa o ANALISADOR SINTÁTICO para a linguagem Cshort.
+ * * Fluxo:
+ * 1. Abre o arquivo de entrada.
+ * 2. Chama a função Prog() do analisador sintático, que é o ponto de partida da análise.
+ * 3. Fecha o arquivo ao final.
+ */
 
 int main(int argc, char *argv[]) {
+    // Verifica se um nome de arquivo foi passado como argumento
     if (argc < 2) {
-        printf("Uso: %s <arquivo.cshort>\n", argv[0]);
+        printf("Uso: %s <arquivo_fonte.cshort>\n", argv[0]);
         return 1;
     }
 
-    char cwd[1024];
-    _getcwd(cwd, sizeof(cwd));
-    printf("Diretorio de trabalho atual: %s\n", cwd);
-    printf("Tentando abrir o arquivo (argv[1]): %s\n", argv[1]);
-
-    fd = fopen(argv[1], "r");
+    // Tenta abrir o arquivo passado como argumento
+    fd = fopen(argv[1], "r"); 
     if (!fd) {
-        printf("Erro ao abrir arquivo: %s\n", argv[1]);
+        printf("Nao consegui abrir o arquivo '%s'.\n", argv[1]);
         return 1;
     }
 
-    // A mágica acontece aqui: inicia a análise sintática
-    Prog(); // O analisador sintático agora controla a chamada ao léxico
+    // Chama a função inicial do Analisador Sintático
+    Prog();
 
-    fclose(fd);
-    
-    // Opcional: verificar se ocorreram erros sintáticos
+    printf("\nAnalise sintatica concluida.\n");
     if (houveErroSintatico) {
-         printf("\nCompilacao encerrada com erros.\n");
-         return 1;
+        printf("Foram encontrados erros sintaticos.\n");
+    } else {
+        printf("Nenhum erro sintatico encontrado.\n");
     }
 
-    printf("\nCompilacao concluida com sucesso.\n");
+    fclose(fd); // Fecha o arquivo
     return 0;
 }
