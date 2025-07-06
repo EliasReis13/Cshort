@@ -1,3 +1,0 @@
-void erroString() {
-    string s = "string sem fim;
-}
