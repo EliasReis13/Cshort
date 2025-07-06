@@ -2,7 +2,10 @@
 
 Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme a especificação presente no documento `Especificação Cshort-v1.0.pdf`.
 
-Atualmente, está concluída a **fase de análise léxica**, responsável por identificar os tokens válidos em programas escritos na linguagem Cshort.
+Atualmente, estão implementadas as fases de:
+- ✅ Análise Léxica
+- ✅ Análise Sintática
+- 🛠️ Em desenvolvimento: Análise Semântica
 
 ---
 
@@ -23,37 +26,41 @@ A linguagem **Cshort** é uma linguagem estruturada inspirada em C. Sua gramáti
 
 ```plaintext
 Cshort/
-├── AFD/                    # Arquivos auxiliares do autômato
+├── .vscode/                # Configurações do VSCode
+│   └── tasks.json
+├── AFD/                    # Autômato finito determinístico
 │   ├── AFD.jff
 │   ├── AFD.jpg
 │   └── JFLAP7.1.jar
-├── bin/                    # Executáveis gerados
+├── bin/                    # Executável gerado
 │   └── cshort.exe
 ├── build/                  # Scripts de compilação
 │   ├── compile_all.bat
-│   ├── compile_lex.bat
 │   ├── compile_all.sh
+│   ├── compile_lex.bat
 │   └── compile_lex.sh
 ├── Doc/                    # Documentação do projeto
-│   └── Especificação Cshort-v1.0.pdf
-├── out/                    # Arquivos de saída gerados pelo compilador
+│   ├── Especificação Cshort-v1.0.pdf
+│   └── Implementação de analisador.pdf
+├── out/                    # Saídas do compilador
 │   └── tokens.txt
-├── src/                    # Código-fonte do compilador
-│   ├── main.c              # Main principal do compilador
-│   └── lex/
-│       ├── anaLex.c
-│       ├── anaLex.h
-│       └── main.c          # Main de teste do léxico
+├── src/                    # Código-fonte
+│   ├── main.c              # Main do compilador completo
+│   ├── lex/                # Analisador léxico
+│   │   ├── anaLex.c
+│   │   ├── anaLex.h
+│   │   └── main.c
+│   └── sint/               # Analisador sintático
+│       ├── anaSint.c
+│       ├── anaSint.h
+│       └── main.c
 ├── test/                   # Casos de teste da linguagem
-│   ├── teste1.cshort
-│   ├── teste2.cshort
-│   ├── teste3.cshort
-│   ├── teste_erro1.cshort
-│   ├── teste_erro2.cshort
-│   └── teste_erro3.cshort
+│   ├── teste_1.cshort
+│   ├── teste_2.cshort
+│   ├── teste_com_erros.cshort
+│   └── teste_sem_erros.cshort
 ├── .gitignore
 └── README.md
-
 
 ```
 
@@ -67,6 +74,9 @@ Cshort/
 | `src/lex/anaLex.c`               | Implementação do analisador léxico             |
 | `src/lex/anaLex.h`               | Definições de tokens e protótipos              |
 | `src/lex/main.c`                 | Main de teste apenas do léxico                 |
+| `src/sint/anaSint.c`             | Implementação do analisador sintático          |
+| `src/sint/anaSint.h`             | Cabeçalhos do analisador sintático             |
+| `src/sint/main.c`                | Teste isolado da análise sintática             |
 | `src/main.c`                     | Main geral do compilador                       |
 | `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows          |
 | `test/*.cshort`                  | Casos de teste válidos e com erros léxicos     |
