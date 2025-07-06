@@ -1,40 +1,64 @@
+/**
+ * @file anaSint.h
+ * @brief Arquivo de cabeçalho (Interface) do Analisador Sintático.
+ *
+ * @purpose
+ * Este arquivo define a "interface pública" do módulo de análise sintática.
+ * Ele contém as definições de tipos, declarações de variáveis globais externas
+ * e protótipos de funções que são necessários para que outros módulos (como o main.c)
+ * possam interagir com o analisador.
+ */
+
 #ifndef ANASINT_H
 #define ANASINT_H
 
 #include <stdio.h>
-#include <stdbool.h> 
+#include <stdbool.h>
 #include "../lex/anaLex.h"
 
-// --- Enum para o sinalizador de declaração ---
-// Adicionado conforme especificado no PDF para a estratégia de análise fatorada.
-typedef enum { 
-    NO_DECL, 
-    DECL_VAR, 
-    DECL_PROT, 
-    DECL_FUNC 
+/**
+ * @enum DECL_SINALIZADOR
+ * @brief Sinaliza o tipo de declaração encontrada pela função Decl().
+ *
+ * Esta enumeração é usada como um mecanismo de comunicação entre a função Decl() e
+ * seu chamador (Prog()). Ela informa se a declaração analisada foi de uma variável,
+ * um protótipo de função ou uma definição completa de função, permitindo que o
+ * parser saiba se deve ou não esperar um corpo de função `{...}` em seguida.
+ */
+typedef enum {
+    NO_DECL,      // Nenhuma declaração válida encontrada
+    DECL_VAR,     // Declaração de variável(is)
+    DECL_PROT,    // Declaração de protótipo de função
+    DECL_FUNC     // Declaração e definição de função
 } DECL_SINALIZADOR;
 
 // --- Variáveis Globais Externas ---
-extern FILE *fd;
-extern TOKEN t;
-extern TOKEN tLookahead; // Adicionado para suportar a análise com lookahead
-extern char TABS[200];
-extern int contLinha;
-extern bool modoPanico;
-extern bool houveErroSintatico;  
+/**
+ * A palavra-chave 'extern' indica que estas variáveis são definidas em outro
+ * arquivo (neste caso, anaSint.c), mas podem ser acessadas por qualquer
+ * arquivo que inclua este cabeçalho.
+ */
+extern FILE *fd;                // Ponteiro para o arquivo de entrada
+extern TOKEN t;                 // Armazena o token atual
+extern TOKEN tLookahead;        // Armazena o próximo token (para análise preditiva)
+extern char TABS[200];           // Usado para indentar a saída da árvore de análise
+extern int contLinha;           // Contador de linha atual (originário do anaLex)
+extern bool modoPanico;         // Flag que ativa a recuperação de erro
+extern bool houveErroSintatico; // Flag que indica se algum erro ocorreu
 
 // --- Protótipos das Funções do Parser ---
+// Cada função corresponde a um não-terminal da gramática da linguagem Cshort.
 
-// Ponto de entrada e rotinas de alto nível (estrutura do PDF)
+// Ponto de entrada e rotinas de alto nível
 void Prog();
-DECL_SINALIZADOR Decl(); // Modificada para retornar o sinalizador [cite: 39]
-void corpo_func();       // Nova função para tratar o corpo de uma função [cite: 32]
+DECL_SINALIZADOR Decl();
+void corpo_func();
 int  Tipo();
 
 // Análise de parâmetros
 void Tipos_param();
 
-// Análise de Comandos (permanecem os mesmos)
+// Análise de Comandos
 void Cmd();
 void Cmd_if();
 void Cmd_while();
@@ -44,7 +68,7 @@ void Cmd_bloco();
 void Cmd_break();
 void Cmd_continue();
 
-// Análise de Expressões (permanecem as mesmas)
+// Análise de Expressões
 void Expr();
 void Expr_atrib();
 void Expr_ou();
