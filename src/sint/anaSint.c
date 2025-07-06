@@ -6,41 +6,22 @@
 #include "anaSint.h"
 #include "../lex/anaLex.h"
 
-bool modoPanico = false; // Variável para controlar a recuperação de erro
+// --- Variáveis Globais ---
+FILE *fd;
+TOKEN t, tLookahead; // Token atual e token de lookahead
+char TABS[200] = "";
+bool modoPanico = false;
 bool houveErroSintatico = false;
 
-// --- Protótipos ---
-void Prog();
-void Decl();
-void Decl_var();
-int  Tipo();
-void Tipos_param();
-void Cmd();
-void Cmd_if();
-void Cmd_while();
-void Cmd_for();
-void Cmd_return();
-void Cmd_bloco();
-void Cmd_break();
-void Cmd_continue();
-void Decl_ou_Func();
-void Func_body();
-void Decl_var_body();
-void Expr();
-void Expr_atrib();
-void Expr_ou();
-void Expr_e();
-void Expr_relacional();
-void Expr_aditiva();
-void Expr_multiplicativa();
-void Fator();
-void print_folha(TOKEN tk);
+// --- Protótipos de Funções Auxiliares Locais ---
+void nextToken();
+void error(char msg[]);
 void aumenta_ident();
 void diminui_ident();
+void print_folha(TOKEN tk);
+void sincroniza();
 
-char TABS[200] = "";
-FILE *fd;
-TOKEN t;
+// --- Implementação das Funções Auxiliares ---
 
 void error(char msg[]) {
     printf("[ERRO | Linha %d]: %s\n", contLinha, msg);
@@ -71,19 +52,25 @@ void print_folha(TOKEN tk) {
     }
 }
 
-// Função para sincronizar o parser após um erro
+void nextToken() {
+    t = tLookahead;
+    if (t.cat != END_FILE) {
+        tLookahead = AnaLex(fd);
+    }
+}
+
 void sincroniza() {
-    // Descarta tokens até encontrar um ponto seguro para recomeçar
-    while (t.cat != END_FILE) {
-        // Pontos de sincronização: ; } ou início de um novo comando
-        if (t.cat == END_EXPRESSION) { // Ponto e vírgula
-            t = AnaLex(fd);
-            break;
+    bool pontoEncontrado = false; // Flag para controlar a saída
+
+    while (t.cat != END_FILE && !pontoEncontrado) { // Condição de parada na flag
+        if (t.cat == END_EXPRESSION) {
+            nextToken();
+            pontoEncontrado = true;
         }
-        if (t.cat == SN && t.codigo == FECHA_CHAVE) { // Fim de bloco
-            break; 
+        else if (t.cat == SN && t.codigo == FECHA_CHAVE) {
+            pontoEncontrado = true;
         }
-        if (t.cat == RESERVED_WORD) {
+        else if (t.cat == RESERVED_WORD) {
             switch(t.codigo) {
                 case PR_IF:
                 case PR_WHILE:
@@ -93,21 +80,24 @@ void sincroniza() {
                 case PR_FLOAT:
                 case PR_CHAR:
                 case PR_STRING:
-                    goto end_loop; // Sai dos dois laços
+                    pontoEncontrado = true; // Apenas define a flag, não pula
+                    break; // Sai do switch
+                default:
+                    nextToken(); // Consome token se não for um ponto de sinc.
             }
+        } else {
+            nextToken(); // Consome qualquer outro token
         }
-        t = AnaLex(fd);
     }
-end_loop:
     modoPanico = false; // Desativa o modo pânico após sincronizar
-}
+} // <-- Este é o final correto da função
 
 void consome(int categoria, int codigo) {
     if (modoPanico) return; 
 
-    if (t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
+    if ((int)t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
         print_folha(t);
-        t = AnaLex(fd);
+        nextToken();
     } else {
         char msg[200];
         sprintf(msg, "Esperado (cat=%d, cod=%d), encontrado token '%s' (cat=%d, cod=%d)", 
@@ -116,6 +106,8 @@ void consome(int categoria, int codigo) {
     }
 }
 
+// --- Implementação das Funções do Parser ---
+
 int Tipo() {
     if (t.cat == RESERVED_WORD) {
         switch (t.codigo) {
@@ -123,6 +115,7 @@ int Tipo() {
             case PR_FLOAT:
             case PR_CHAR:
             case PR_STRING:
+            case PR_VOID: // Adicionado void como tipo válido aqui
                 return 1;
         }
     }
@@ -130,81 +123,159 @@ int Tipo() {
 }
 
 void Prog() {
-    printf("<Prog>\n"); aumenta_ident();
-    t = AnaLex(fd);
+    printf("<Prog>\n"); 
+    aumenta_ident();
+    
+    // Inicialização correta do sistema de lookahead
+    tLookahead = AnaLex(fd);
+    nextToken();
+    
     while (t.cat != END_FILE) {
-        if (Tipo()) {
-            Decl_ou_Func();
-        } else {
-            error("Esperado tipo no inicio de declaracao ou funcao");
+        DECL_SINALIZADOR flag = Decl();
 
-            t = AnaLex(fd);
-        }
+        
+        if (flag == DECL_FUNC) {
+            corpo_func();
+        } 
+
     }
-    diminui_ident(); printf("</Prog>\n");
+    
+    diminui_ident(); 
+    printf("</Prog>\n");
 }
 
-void Decl_ou_Func() {
-    printf("%s<Decl_ou_Func>\n", TABS); aumenta_ident();
-    print_folha(t); consome(t.cat, t.codigo); // tipo
-    print_folha(t); consome(ID, 0); // identificador
-    if (t.cat == SN && t.codigo == ABRE_PARENTESES)
-        Func_body();
-    else
-        Decl_var_body();
-    diminui_ident(); printf("%s</Decl_ou_Func>\n", TABS);
-}
-
-void Func_body() {
-    print_folha(t); consome(SN, ABRE_PARENTESES);
-    Tipos_param();
-    print_folha(t); consome(SN, FECHA_PARENTESES);
+void corpo_func() {
+    printf("%s<corpo_func>\n", TABS);
+    aumenta_ident();
     Cmd_bloco();
+    diminui_ident();
+    printf("%s</corpo_func>\n", TABS);
 }
 
-void Decl_var_body() {
-    if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
-        print_folha(t); consome(SN, ABRE_COLCHETE);
-        print_folha(t); consome(CT_INT, 0);
-        print_folha(t); consome(SN, FECHA_COLCHETE);
-    }
-    while (t.cat == SN && t.codigo == VIRGULA) {
-        print_folha(t); consome(SN, VIRGULA);
-        print_folha(t); consome(ID, 0);
-    }
-    print_folha(t); consome(END_EXPRESSION, 0);
-}
+DECL_SINALIZADOR Decl() {
+    DECL_SINALIZADOR declFlag = NO_DECL;
 
-void Decl() {
-    if (Tipo()) {
-        print_folha(t); consome(t.cat, t.codigo);
-        print_folha(t); consome(ID, 0);
-        while (t.cat == SN && t.codigo == VIRGULA) {
-            print_folha(t); consome(SN, VIRGULA);
-            print_folha(t); consome(ID, 0);
+    // Garante que a declaração começa com um tipo
+    if (!Tipo()) {
+        error("Esperado um tipo (int, float, char, etc) no inicio da declaracao.");
+        nextToken(); // Consome o token inválido
+        sincroniza();
+        return NO_DECL;
+    }
+    
+    int tipo_declarado = t.codigo; 
+    nextToken(); // Consome o tipo (ex: 'int')
+
+    // Garante que um identificador (nome) venha após o tipo
+    if (t.cat != ID) {
+        error("Identificador esperado apos o tipo.");
+        sincroniza(); // Sincroniza para tentar se recuperar
+        return NO_DECL;
+    }
+    
+    // Olhamos um token à frente para ver se é uma função
+    if (tLookahead.cat == SN && tLookahead.codigo == ABRE_PARENTESES) {
+        // --- Início da nova lógica para funções ---
+
+        nextToken(); // Consome o ID da função. Agora 't' é o token '('
+        nextToken(); // Consome o '('. Agora 't' é o início dos parâmetros
+        
+        Tipos_param(); // Analisa a lista de parâmetros
+        
+        consome(SN, FECHA_PARENTESES); // Espera e consome o ')'
+        
+        // Verifica o que vem DEPOIS do ')' para decidir
+        if (t.cat == SN && t.codigo == ABRE_CHAVE) {
+            // Se for um '{', então é uma DEFINIÇÃO de função.
+            declFlag = DECL_FUNC;
+            // Importante: Não consumimos o '{'. A função corpo_func() fará isso.
+        } else {
+            // Se não for '{', asumimos que é um PROTÓTIPO e deve terminar com ';'.
+            declFlag = DECL_PROT;
+            consome(END_EXPRESSION, 0); // Espera e consome o ';'
         }
-        print_folha(t); consome(END_EXPRESSION, 0);
-    } else error("Esperado tipo na declaracao");
+        // --- Fim da nova lógica para funções ---
+
+    } else {
+        // Se não for uma função, é uma declaração de variável.
+        declFlag = DECL_VAR;
+        if (tipo_declarado == PR_VOID) {
+            error("Variaveis nao podem ser do tipo 'void'.");
+        }
+
+        // Loop para tratar múltiplas declarações de variáveis (ex: int a, b, c;)
+        while(true) {
+            if (t.cat != ID) {
+                error("Identificador de variavel esperado.");
+                break; // Sai do loop se algo der errado
+            }
+            nextToken(); // Consome o ID da variável
+
+            if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
+                nextToken();
+                if (t.cat != CT_INT) error("Uma constante inteira era esperada para o tamanho do array.");
+                nextToken();
+                if (t.cat != SN || t.codigo != FECHA_COLCHETE) error("']' esperado para fechar a definicao do array.");
+                nextToken();
+            }
+            
+            if (t.cat == SN && t.codigo == VIRGULA) {
+                nextToken(); // Consome a vírgula e continua o loop
+            } else {
+                break; // Se não for vírgula, a lista de declarações terminou
+            }
+        }
+        consome(END_EXPRESSION, 0); // Consome o ';' no final da linha
+    }
+    
+    return declFlag;
 }
 
 void Tipos_param() {
-    if (t.cat == RESERVED_WORD) {
-        while (true) {
-            if (!Tipo()) break;
-            print_folha(t); consome(t.cat, t.codigo);
-            print_folha(t); consome(ID, 0);
-            if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
-                print_folha(t); consome(SN, ABRE_COLCHETE);
-                print_folha(t); consome(SN, FECHA_COLCHETE);
-            }
-            if (t.cat != SN || t.codigo != VIRGULA) break;
-            print_folha(t); consome(SN, VIRGULA);
+    // Primeiro, verifica o caso de não haver parâmetros, ex: (void)
+    if (t.cat == RESERVED_WORD && t.codigo == PR_VOID) {
+        // Olhamos à frente para ter certeza de que é só 'void' e ')'
+        if (tLookahead.cat == SN && tLookahead.codigo == FECHA_PARENTESES) {
+            consome(RESERVED_WORD, PR_VOID); // Consome 'void'
+            return; // Termina a análise de parâmetros
         }
     }
+
+    // Se não for o caso especial de (void), ou se houver parâmetros
+    if (Tipo()) { // Verifica se há um tipo válido
+        while (true) {
+            if (!Tipo()) break; // Para se não encontrar mais tipos
+
+            consome(t.cat, t.codigo); // Consome o tipo (ex: 'int')
+
+            // --- CORREÇÃO PRINCIPAL ---
+            // O identificador do parâmetro é OPCIONAL, então só consumimos se ele existir.
+            if (t.cat == ID) {
+                consome(ID, 0); // Consome o nome do parâmetro (ex: 'n')
+            }
+
+            // Opcional: tratar arrays em parâmetros
+            if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
+                consome(SN, ABRE_COLCHETE);
+                consome(SN, FECHA_COLCHETE);
+            }
+
+            // Se não houver uma vírgula, a lista de parâmetros acabou
+            if (t.cat != SN || t.codigo != VIRGULA) {
+                break;
+            }
+            consome(SN, VIRGULA); // Consome a vírgula para o próximo parâmetro
+        }
+    }
+
 }
 
 void Cmd() {
-    if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
+    if (Tipo()) { // Uma declaração dentro de um bloco é um comando
+        Decl();
+        
+    }
+    else if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_WHILE) Cmd_while();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_FOR) Cmd_for();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_RETURN) Cmd_return();
@@ -213,66 +284,68 @@ void Cmd() {
     else if (t.cat == SN && t.codigo == ABRE_CHAVE) Cmd_bloco();
     else {
         Expr();
-        print_folha(t); consome(END_EXPRESSION, 0);
+        consome(END_EXPRESSION, 0);
     }
 }
 
 void Cmd_if() {
-    print_folha(t); consome(RESERVED_WORD, PR_IF);
-    print_folha(t); consome(SN, ABRE_PARENTESES);
+    consome(RESERVED_WORD, PR_IF);
+    consome(SN, ABRE_PARENTESES);
     Expr();
-    print_folha(t); consome(SN, FECHA_PARENTESES);
+    consome(SN, FECHA_PARENTESES);
     Cmd();
     if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
-        print_folha(t); consome(RESERVED_WORD, PR_ELSE);
+        consome(RESERVED_WORD, PR_ELSE);
         Cmd();
     }
 }
 
 void Cmd_while() {
-    print_folha(t); consome(RESERVED_WORD, PR_WHILE);
-    print_folha(t); consome(SN, ABRE_PARENTESES);
+    consome(RESERVED_WORD, PR_WHILE);
+    consome(SN, ABRE_PARENTESES);
     Expr();
-    print_folha(t); consome(SN, FECHA_PARENTESES);
+    consome(SN, FECHA_PARENTESES);
     Cmd();
 }
 
 void Cmd_for() {
-    print_folha(t); consome(RESERVED_WORD, PR_FOR);
-    print_folha(t); consome(SN, ABRE_PARENTESES);
-    Expr(); print_folha(t); consome(END_EXPRESSION, 0);
-    Expr(); print_folha(t); consome(END_EXPRESSION, 0);
-    Expr(); print_folha(t); consome(SN, FECHA_PARENTESES);
+    consome(RESERVED_WORD, PR_FOR);
+    consome(SN, ABRE_PARENTESES);
+    if(t.cat != END_EXPRESSION) Expr(); 
+    consome(END_EXPRESSION, 0);
+    if(t.cat != END_EXPRESSION) Expr(); 
+    consome(END_EXPRESSION, 0);
+    if(t.cat != SN || t.codigo != FECHA_PARENTESES) Expr();
+    consome(SN, FECHA_PARENTESES);
     Cmd();
 }
 
 void Cmd_return() {
-    print_folha(t); consome(RESERVED_WORD, PR_RETURN);
+    consome(RESERVED_WORD, PR_RETURN);
     if (t.cat != END_EXPRESSION) Expr();
-    print_folha(t); consome(END_EXPRESSION, 0);
+    consome(END_EXPRESSION, 0);
 }
 
 void Cmd_break() {
-    print_folha(t); consome(RESERVED_WORD, PR_BREAK);
-    print_folha(t); consome(END_EXPRESSION, 0);
+    consome(RESERVED_WORD, PR_BREAK);
+    consome(END_EXPRESSION, 0);
 }
 
 void Cmd_continue() {
-    print_folha(t); consome(RESERVED_WORD, PR_CONTINUE);
-    print_folha(t); consome(END_EXPRESSION, 0);
+    consome(RESERVED_WORD, PR_CONTINUE);
+    consome(END_EXPRESSION, 0);
 }
 
 void Cmd_bloco() {
-    print_folha(t); consome(SN, ABRE_CHAVE);
+    consome(SN, ABRE_CHAVE);
     while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
         if (modoPanico) {
             sincroniza();
-            // Após sincronizar, podemos estar no '}' final, então verificamos de novo
             if (t.cat == SN && t.codigo == FECHA_CHAVE) break;
         }
         Cmd();
     }
-    print_folha(t); consome(SN, FECHA_CHAVE);
+    consome(SN, FECHA_CHAVE);
 }
 
 void Expr() {
@@ -282,7 +355,7 @@ void Expr() {
 void Expr_atrib() {
     Expr_ou();
     if (t.cat == SN && t.codigo == OP_ATRIBUICAO) {
-        print_folha(t); consome(SN, OP_ATRIBUICAO);
+        consome(SN, OP_ATRIBUICAO);
         Expr_atrib();
     }
 }
@@ -290,7 +363,7 @@ void Expr_atrib() {
 void Expr_ou() {
     Expr_e();
     while (t.cat == SN && t.codigo == OP_OR) {
-        print_folha(t); consome(SN, OP_OR);
+        consome(SN, OP_OR);
         Expr_e();
     }
 }
@@ -298,7 +371,7 @@ void Expr_ou() {
 void Expr_e() {
     Expr_relacional();
     while (t.cat == SN && t.codigo == OP_AND) {
-        print_folha(t); consome(SN, OP_AND);
+        consome(SN, OP_AND);
         Expr_relacional();
     }
 }
@@ -306,7 +379,7 @@ void Expr_e() {
 void Expr_relacional() {
     Expr_aditiva();
     while (t.cat == SN && (t.codigo == OP_IGUAL || t.codigo == OP_DIFERENTE || t.codigo == OP_MAIOR || t.codigo == OP_MAIOR_IGUAL || t.codigo == OP_MENOR || t.codigo == OP_MENOR_IGUAL)) {
-        print_folha(t); consome(SN, t.codigo);
+        consome(SN, t.codigo);
         Expr_aditiva();
     }
 }
@@ -314,7 +387,7 @@ void Expr_relacional() {
 void Expr_aditiva() {
     Expr_multiplicativa();
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
-        print_folha(t); consome(SN, t.codigo);
+        consome(SN, t.codigo);
         Expr_multiplicativa();
     }
 }
@@ -322,39 +395,39 @@ void Expr_aditiva() {
 void Expr_multiplicativa() {
     Fator();
     while (t.cat == SN && (t.codigo == OP_MULTIPLICACAO || t.codigo == OP_DIVISAO)) {
-        print_folha(t); consome(SN, t.codigo);
+        consome(SN, t.codigo);
         Fator();
     }
 }
 
 void Fator() {
     if (t.cat == SN && (t.codigo == OP_NOT || t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
-        print_folha(t); consome(SN, t.codigo);
+        consome(SN, t.codigo);
         Fator();
     } else if (t.cat == ID) {
-        print_folha(t); consome(ID, 0);
+        consome(ID, 0);
         if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
-            print_folha(t); consome(SN, ABRE_COLCHETE);
+            consome(SN, ABRE_COLCHETE);
             Expr();
-            print_folha(t); consome(SN, FECHA_COLCHETE);
+            consome(SN, FECHA_COLCHETE);
         } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
-            print_folha(t); consome(SN, ABRE_PARENTESES);
+            consome(SN, ABRE_PARENTESES);
             if (t.cat != SN || t.codigo != FECHA_PARENTESES) {
                 Expr();
                 while (t.cat == SN && t.codigo == VIRGULA) {
-                    print_folha(t); consome(SN, VIRGULA);
+                    consome(SN, VIRGULA);
                     Expr();
                 }
             }
-            print_folha(t); consome(SN, FECHA_PARENTESES);
+            consome(SN, FECHA_PARENTESES);
         }
     } else if (t.cat == CT_INT || t.cat == CT_REAL || t.cat == CT_CHAR || t.cat == CT_STRING) {
-        print_folha(t); consome(t.cat, 0);
+        consome(t.cat, 0);
     } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
-        print_folha(t); consome(SN, ABRE_PARENTESES);
+        consome(SN, ABRE_PARENTESES);
         Expr();
-        print_folha(t); consome(SN, FECHA_PARENTESES);
+        consome(SN, FECHA_PARENTESES);
     } else {
-        error("Expressão mal formada no fator.");
+        error("Expressao mal formada no fator.");
     }
 }
