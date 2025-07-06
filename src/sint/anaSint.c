@@ -1,17 +1,21 @@
 // Analisador Sintático Expandido para linguagem Cshort
+// VERSÃO COM TABELA DE SÍMBOLOS INTEGRADA
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include "anaSint.h"
 #include "../lex/anaLex.h"
+#include "../tabela/tabelaSimbolos.h" // <<<--- INCLUSÃO DA TABELA DE SÍMBOLOS
 
 // --- Variáveis Globais ---
 FILE *fd;
-TOKEN t, tLookahead; // Token atual e token de lookahead
+TOKEN t, tLookahead;
 char TABS[200] = "";
 bool modoPanico = false;
 bool houveErroSintatico = false;
+TabelaSimbolos ts; // <<<--- TABELA DE SÍMBOLOS GLOBAL
 
 // --- Protótipos de Funções Auxiliares Locais ---
 void nextToken();
@@ -21,11 +25,34 @@ void diminui_ident();
 void print_folha(TOKEN tk);
 void sincroniza();
 
+// Protótipos do Parser (alguns precisam de novos parâmetros)
+void Prog();
+DECL_SINALIZADOR Decl();
+void corpo_func();
+void Tipos_param(char* nome_funcao); // <<<--- PRECISA DO NOME DA FUNÇÃO
+void Cmd();
+void Cmd_if();
+void Cmd_while();
+void Cmd_for();
+void Cmd_return();
+void Cmd_break();
+void Cmd_continue();
+void Cmd_bloco();
+void Expr();
+void Expr_atrib();
+void Expr_ou();
+void Expr_e();
+void Expr_relacional();
+void Expr_aditiva();
+void Expr_multiplicativa();
+void Fator();
+
+
 // --- Implementação das Funções Auxiliares ---
 
 void error(char msg[]) {
-    printf("[ERRO | Linha %d]: %s\n", contLinha, msg);
-    modoPanico = true; 
+    printf("[ERRO SINTATICO | Linha %d]: %s\n", contLinha, msg);
+    modoPanico = true;
     houveErroSintatico = true;
 }
 
@@ -60,9 +87,9 @@ void nextToken() {
 }
 
 void sincroniza() {
-    bool pontoEncontrado = false; // Flag para controlar a saída
+    bool pontoEncontrado = false; 
 
-    while (t.cat != END_FILE && !pontoEncontrado) { // Condição de parada na flag
+    while (t.cat != END_FILE && !pontoEncontrado) {
         if (t.cat == END_EXPRESSION) {
             nextToken();
             pontoEncontrado = true;
@@ -80,33 +107,33 @@ void sincroniza() {
                 case PR_FLOAT:
                 case PR_CHAR:
                 case PR_STRING:
-                    pontoEncontrado = true; // Apenas define a flag, não pula
-                    break; // Sai do switch
+                    pontoEncontrado = true;
+                    break; 
                 default:
-                    nextToken(); // Consome token se não for um ponto de sinc.
+                    nextToken();
             }
         } else {
-            nextToken(); // Consome qualquer outro token
+            nextToken();
         }
     }
-    modoPanico = false; // Desativa o modo pânico após sincronizar
-} // <-- Este é o final correto da função
+    modoPanico = false;
+}
 
 void consome(int categoria, int codigo) {
-    if (modoPanico) return; 
+    if (modoPanico) return;
 
     if ((int)t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
         print_folha(t);
         nextToken();
     } else {
         char msg[200];
-        sprintf(msg, "Esperado (cat=%d, cod=%d), encontrado token '%s' (cat=%d, cod=%d)", 
+        sprintf(msg, "Esperado (cat=%d, cod=%d), encontrado token '%s' (cat=%d, cod=%d)",
                 categoria, codigo, t.lexema, t.cat, t.codigo);
         error(msg);
     }
 }
 
-// --- Implementação das Funções do Parser ---
+// --- Implementação das Funções do Parser com Semântica ---
 
 int Tipo() {
     if (t.cat == RESERVED_WORD) {
@@ -115,7 +142,7 @@ int Tipo() {
             case PR_FLOAT:
             case PR_CHAR:
             case PR_STRING:
-            case PR_VOID: // Adicionado void como tipo válido aqui
+            case PR_VOID:
                 return 1;
         }
     }
@@ -123,31 +150,34 @@ int Tipo() {
 }
 
 void Prog() {
-    printf("<Prog>\n"); 
+    printf("<Prog>\n");
     aumenta_ident();
-    
-    // Inicialização correta do sistema de lookahead
+
+    ts = inicializa_tabela(); // <<<--- INICIALIZA A TABELA DE SÍMBOLOS
+
     tLookahead = AnaLex(fd);
     nextToken();
-    
+
     while (t.cat != END_FILE) {
         DECL_SINALIZADOR flag = Decl();
-
-        
         if (flag == DECL_FUNC) {
             corpo_func();
-        } 
-
+        }
     }
-    
-    diminui_ident(); 
+
+    imprime_tabela(ts); // <<<--- IMPRIME A TABELA NO FINAL PARA DEBUG
+    diminui_ident();
     printf("</Prog>\n");
 }
 
 void corpo_func() {
     printf("%s<corpo_func>\n", TABS);
     aumenta_ident();
+    
+    abre_escopo(&ts); // <<<--- ABRE NOVO ESCOPO PARA O CORPO DA FUNÇÃO
     Cmd_bloco();
+    fecha_escopo(&ts); // <<<--- FECHA O ESCOPO DA FUNÇÃO
+
     diminui_ident();
     printf("%s</corpo_func>\n", TABS);
 }
@@ -155,125 +185,142 @@ void corpo_func() {
 DECL_SINALIZADOR Decl() {
     DECL_SINALIZADOR declFlag = NO_DECL;
 
-    // Garante que a declaração começa com um tipo
     if (!Tipo()) {
         error("Esperado um tipo (int, float, char, etc) no inicio da declaracao.");
-        nextToken(); // Consome o token inválido
+        nextToken();
         sincroniza();
         return NO_DECL;
     }
-    
-    int tipo_declarado = t.codigo; 
-    nextToken(); // Consome o tipo (ex: 'int')
 
-    // Garante que um identificador (nome) venha após o tipo
+    int tipo_declarado = t.codigo;
+    nextToken(); // Consome o tipo
+
     if (t.cat != ID) {
         error("Identificador esperado apos o tipo.");
-        sincroniza(); // Sincroniza para tentar se recuperar
+        sincroniza();
         return NO_DECL;
     }
-    
-    // Olhamos um token à frente para ver se é uma função
+
+    char nome_id[100];
+    strcpy(nome_id, t.lexema); // <<<--- GUARDA O NOME DO ID ANTES DE CONSUMIR
+
     if (tLookahead.cat == SN && tLookahead.codigo == ABRE_PARENTESES) {
-        // --- Início da nova lógica para funções ---
+        // --- LÓGICA SEMÂNTICA PARA FUNÇÕES ---
+        SIMBOLO s;
+        strcpy(s.id, nome_id);
+        s.tipo = tipo_declarado;
+        s.categoria = CAT_FUNC;
+        s.info.func.num_parametros = 0; // Inicializa contagem de parâmetros
+        insere_simbolo(&ts, s);
 
-        nextToken(); // Consome o ID da função. Agora 't' é o token '('
-        nextToken(); // Consome o '('. Agora 't' é o início dos parâmetros
-        
-        Tipos_param(); // Analisa a lista de parâmetros
-        
-        consome(SN, FECHA_PARENTESES); // Espera e consome o ')'
-        
-        // Verifica o que vem DEPOIS do ')' para decidir
+        nextToken(); // Consome o ID da função
+        nextToken(); // Consome o '('
+
+        // Abre um escopo temporário para os parâmetros
+        abre_escopo(&ts);
+        Tipos_param(nome_id); // <<<--- PASSA O NOME DA FUNÇÃO PARA REGISTRAR OS PARÂMETROS
+        consome(SN, FECHA_PARENTESES);
+
         if (t.cat == SN && t.codigo == ABRE_CHAVE) {
-            // Se for um '{', então é uma DEFINIÇÃO de função.
-            declFlag = DECL_FUNC;
-            // Importante: Não consumimos o '{'. A função corpo_func() fará isso.
+            declFlag = DECL_FUNC; // É uma definição de função
         } else {
-            // Se não for '{', asumimos que é um PROTÓTIPO e deve terminar com ';'.
-            declFlag = DECL_PROT;
-            consome(END_EXPRESSION, 0); // Espera e consome o ';'
+            declFlag = DECL_PROT; // É um protótipo
+            s.categoria = CAT_PROT; // Atualiza categoria para protótipo
+            fecha_escopo(&ts); // <<<--- FECHA O ESCOPO DOS PARÂMETROS, JÁ QUE NÃO HÁ CORPO
+            consome(END_EXPRESSION, 0);
         }
-        // --- Fim da nova lógica para funções ---
-
     } else {
-        // Se não for uma função, é uma declaração de variável.
+        // --- LÓGICA SEMÂNTICA PARA VARIÁVEIS ---
         declFlag = DECL_VAR;
         if (tipo_declarado == PR_VOID) {
-            error("Variaveis nao podem ser do tipo 'void'.");
+            erro_semantico("Variaveis nao podem ser do tipo 'void'.", contLinha);
         }
 
-        // Loop para tratar múltiplas declarações de variáveis (ex: int a, b, c;)
+        // Loop para tratar múltiplas declarações (ex: int a, b, c;)
         while(true) {
             if (t.cat != ID) {
                 error("Identificador de variavel esperado.");
-                break; // Sai do loop se algo der errado
+                break;
             }
+            
+            // --- INSERE VARIÁVEL NA TABELA ---
+            SIMBOLO s;
+            strcpy(s.id, t.lexema);
+            s.tipo = tipo_declarado;
+            s.categoria = CAT_VAR;
+            insere_simbolo(&ts, s);
+            
             nextToken(); // Consome o ID da variável
 
             if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
+                // Lógica de array (pode ser expandida na tabela de símbolos se necessário)
                 nextToken();
                 if (t.cat != CT_INT) error("Uma constante inteira era esperada para o tamanho do array.");
                 nextToken();
                 if (t.cat != SN || t.codigo != FECHA_COLCHETE) error("']' esperado para fechar a definicao do array.");
                 nextToken();
             }
-            
+
             if (t.cat == SN && t.codigo == VIRGULA) {
                 nextToken(); // Consome a vírgula e continua o loop
             } else {
-                break; // Se não for vírgula, a lista de declarações terminou
+                break; // A lista de declarações terminou
             }
         }
-        consome(END_EXPRESSION, 0); // Consome o ';' no final da linha
+        consome(END_EXPRESSION, 0); // Consome o ';' no final
     }
-    
     return declFlag;
 }
 
-void Tipos_param() {
-    // Primeiro, verifica o caso de não haver parâmetros, ex: (void)
+void Tipos_param(char* nome_funcao) {
     if (t.cat == RESERVED_WORD && t.codigo == PR_VOID) {
-        // Olhamos à frente para ter certeza de que é só 'void' e ')'
         if (tLookahead.cat == SN && tLookahead.codigo == FECHA_PARENTESES) {
-            consome(RESERVED_WORD, PR_VOID); // Consome 'void'
-            return; // Termina a análise de parâmetros
+            consome(RESERVED_WORD, PR_VOID);
+            return;
         }
     }
 
-    // Se não for o caso especial de (void), ou se houver parâmetros
-    if (Tipo()) { // Verifica se há um tipo válido
+    if (Tipo()) {
         while (true) {
-            if (!Tipo()) break; // Para se não encontrar mais tipos
+            if (!Tipo()) break;
+            int tipo_param = t.codigo;
+            consome(t.cat, t.codigo); // Consome o tipo
 
-            consome(t.cat, t.codigo); // Consome o tipo (ex: 'int')
+            // --- LÓGICA SEMÂNTICA PARA PARÂMETROS ---
+            SIMBOLO p;
+            p.tipo = tipo_param;
+            p.categoria = CAT_PARAM;
+            set_tipo_param(&ts, nome_funcao, tipo_param); // Informa o tipo para a função pai
 
-            // --- CORREÇÃO PRINCIPAL ---
-            // O identificador do parâmetro é OPCIONAL, então só consumimos se ele existir.
             if (t.cat == ID) {
-                consome(ID, 0); // Consome o nome do parâmetro (ex: 'n')
+                strcpy(p.id, t.lexema);
+                insere_simbolo(&ts, p); // Insere o parâmetro como uma variável no escopo
+                incrementa_num_param(&ts, nome_funcao);
+                consome(ID, 0);
+            } else {
+                 // Parâmetro sem nome (comum em protótipos)
+                 strcpy(p.id, ""); // Sem nome
+                 // Não inserimos na tabela como símbolo buscável, mas contamos
+                 incrementa_num_param(&ts, nome_funcao);
             }
-
-            // Opcional: tratar arrays em parâmetros
+            
             if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
                 consome(SN, ABRE_COLCHETE);
                 consome(SN, FECHA_COLCHETE);
             }
 
-            // Se não houver uma vírgula, a lista de parâmetros acabou
             if (t.cat != SN || t.codigo != VIRGULA) {
                 break;
             }
-            consome(SN, VIRGULA); // Consome a vírgula para o próximo parâmetro
+            consome(SN, VIRGULA);
         }
     }
-
 }
+
 
 void Cmd() {
     if (Tipo()) { // Uma declaração dentro de um bloco é um comando
         Decl();
-        
     }
     else if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_WHILE) Cmd_while();
@@ -281,7 +328,11 @@ void Cmd() {
     else if (t.cat == RESERVED_WORD && t.codigo == PR_RETURN) Cmd_return();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_BREAK) Cmd_break();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_CONTINUE) Cmd_continue();
-    else if (t.cat == SN && t.codigo == ABRE_CHAVE) Cmd_bloco();
+    else if (t.cat == SN && t.codigo == ABRE_CHAVE) {
+        abre_escopo(&ts); // <<<--- ABRE ESCOPO PARA BLOCO GENÉRICO
+        Cmd_bloco();
+        fecha_escopo(&ts); // <<<--- FECHA ESCOPO DO BLOCO
+    }
     else {
         Expr();
         consome(END_EXPRESSION, 0);
@@ -311,9 +362,9 @@ void Cmd_while() {
 void Cmd_for() {
     consome(RESERVED_WORD, PR_FOR);
     consome(SN, ABRE_PARENTESES);
-    if(t.cat != END_EXPRESSION) Expr(); 
+    if(t.cat != END_EXPRESSION) Expr();
     consome(END_EXPRESSION, 0);
-    if(t.cat != END_EXPRESSION) Expr(); 
+    if(t.cat != END_EXPRESSION) Expr();
     consome(END_EXPRESSION, 0);
     if(t.cat != SN || t.codigo != FECHA_PARENTESES) Expr();
     consome(SN, FECHA_PARENTESES);
@@ -338,6 +389,7 @@ void Cmd_continue() {
 
 void Cmd_bloco() {
     consome(SN, ABRE_CHAVE);
+
     while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
         if (modoPanico) {
             sincroniza();
@@ -405,12 +457,30 @@ void Fator() {
         consome(SN, t.codigo);
         Fator();
     } else if (t.cat == ID) {
-        consome(ID, 0);
-        if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
+        // --- VERIFICAÇÃO DE USO DE IDENTIFICADOR ---
+        SIMBOLO* s = busca_simbolo(&ts, t.lexema);
+        if (s == NULL) {
+            char msg[200];
+            sprintf(msg, "Identificador '%s' nao foi declarado.", t.lexema);
+            erro_semantico(msg, contLinha);
+        }
+        
+        char id_usado[100];
+        strcpy(id_usado, t.lexema); // Salva o nome do ID para verificações futuras
+        
+        consome(ID, 0); // Consome sintaticamente o ID
+
+        if (t.cat == SN && t.codigo == ABRE_COLCHETE) { // Uso de array
             consome(SN, ABRE_COLCHETE);
             Expr();
             consome(SN, FECHA_COLCHETE);
-        } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
+        } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) { // Chamada de função
+            if (s != NULL && s->categoria != CAT_FUNC && s->categoria != CAT_PROT) {
+                char msg[200];
+                sprintf(msg, "'%s' nao e uma funcao, nao pode ser chamada.", id_usado);
+                erro_semantico(msg, contLinha);
+            }
+            // A verificação de número/tipo de argumentos seria feita aqui.
             consome(SN, ABRE_PARENTESES);
             if (t.cat != SN || t.codigo != FECHA_PARENTESES) {
                 Expr();
