@@ -1,0 +1,32 @@
+/*
+ * teste_com_erros.cshort
+ * Este arquivo contém vários erros sintáticos e semânticos
+ * para validar a detecção e recuperação de erros do analisador.
+ */
+
+void variavel_invalida; /* ERRO SEMÂNTICO: Variáveis não podem ser do tipo 'void'.*/
+
+int calcula(int a, int b);
+
+float principal(void) {
+    int contador
+    float resultado; /* ERRO SINTÁTICO: Ponto e vírgula faltando na linha anterior.*/
+
+    resultado = calcula(10, 20);
+
+    if (contador > 5 { /* ERRO SINTÁTICO: Falta o ')' para fechar a condição.*/
+        resultado = 0;
+    }
+
+    /* ERRO SINTÁTICO: O segundo ponto e vírgula está faltando no for */
+    for (contador = 0; contador < 10) {
+        resultado = resultado + 1;
+    }
+
+    return resultado;
+}
+
+/* ERRO SINTÁTICO: Falta o tipo de retorno da função (deveria ser 'int').*/
+calcula(int a, int b) {
+    return a + b;
+}

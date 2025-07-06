@@ -1,0 +1,4 @@
+float soma(float a, float b){
+    soma = a + b;
+    return soma;
+}
