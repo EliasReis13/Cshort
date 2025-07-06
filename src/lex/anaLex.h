@@ -48,6 +48,7 @@ enum SINAIS {
     ABRE_CHAVE,         // '{'
     FECHA_CHAVE,        // '}'
     VIRGULA             // ','
+    // NÃO PRECISAMOS DE PONTO_VIRGULA AQUI, POIS SEU LÉXICO JÁ USA END_EXPRESSION
 };
 
 
@@ -63,7 +64,10 @@ enum PALAVRA_RESERVADA {
     PR_FOR,        // for
     PR_RETURN,     // return
     PR_BREAK,      // break
-    PR_CONTINUE    // continue
+    PR_CONTINUE,   // continue
+    
+    // >>> LINHA ADICIONADA <<<
+    PR_VOID        // void
 };
 
 // Estrutura que representa um token identificado pelo analisador léxico
