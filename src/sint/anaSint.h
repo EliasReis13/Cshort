@@ -2,40 +2,47 @@
 #define ANASINT_H
 
 #include <stdio.h>
-#include "anaLex.h" // Inclui as definições do analisador léxico (TOKEN, etc.)
+#include <stdbool.h> // Adicionado para bool
+#include "../lex/anaLex.h"
 
 // --- Variáveis Globais Externas ---
-
-extern FILE *fd;        // Ponteiro para o arquivo de código-fonte que está sendo analisado.
-extern TOKEN t;         // Armazena o token atual que está sendo processado pelo parser.
-extern char TABS[200];  // String usada para controlar a indentação na impressão da árvore sintática.
+extern FILE *fd;
+extern TOKEN t;
+extern char TABS[200];
+extern int contLinha;
+extern bool modoPanico;
+extern bool houveErroSintatico;  
 
 // --- Protótipos das Funções do Parser ---
 
-//Função principal e ponto de entrada do analisador sintático.
+// Ponto de entrada e rotinas de alto nível
 void Prog();
+void Decl_ou_Func();
+int  Tipo();
 
-// --- Funções de Análise de Declarações ---
-void Decl();
-void DeclVar(); 
-int Tipo();
-void Tipo_param(); 
+// Análise de corpos de função e declaração
+void Func_body();
+void Decl_var_body();
+void Tipos_param();
 
-// --- Funções de Análise de Estruturas e Comandos ---
-void Func();
-
-void Atrib();
+// Análise de Comandos
 void Cmd();
 void Cmd_if();
 void Cmd_while();
 void Cmd_for();
 void Cmd_return();
+void Cmd_bloco();
+void Cmd_break();
+void Cmd_continue();
 
-
-// --- Funções de Análise de Expressões ---
-void Termo();
+// Análise de Expressões (com tratamento de precedência)
+void Expr();
+void Expr_atrib();
+void Expr_ou();
+void Expr_e();
+void Expr_relacional();
+void Expr_aditiva();
+void Expr_multiplicativa();
 void Fator();
-void Expres();
-void Expres_simp();
 
 #endif
