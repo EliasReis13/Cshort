@@ -120,7 +120,6 @@ const char* get_tipo_string(int tipo) {
 
 void imprime_tabela(TabelaSimbolos ts) {
     printf("\n--- Tabela de Simbolos ---\n");
-    // Novo cabeçalho na ordem solicitada: lexema, escopo, classe, tipo
     printf("%-20s | %-6s | %-12s | %-10s\n", "LEXEMA", "ESCOPO", "CLASSE", "TIPO");
     printf("-----------------------------------------------------------\n");
 
@@ -129,7 +128,6 @@ void imprime_tabela(TabelaSimbolos ts) {
         const char* classe_str = get_classe_string(ts.simbolos[i].categoria);
         const char* tipo_str = get_tipo_string(ts.simbolos[i].tipo);
 
-        // Imprime na nova ordem com os valores de texto
         printf("%-20s | %-6d | %-12s | %-10s\n",
                ts.simbolos[i].id,           // LEXEMA
                ts.simbolos[i].nivel_lexico, // ESCOPO
