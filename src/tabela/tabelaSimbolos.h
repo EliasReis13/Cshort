@@ -1,57 +1,42 @@
-#ifndef TABELA_SIMBOLOS_H
-#define TABELA_SIMBOLOS_H
+#ifndef _TABELA_SIMBOLOS_
+#define _TABELA_SIMBOLOS_
 
+#include <stdbool.h>
+#include <stdio.h>
 #include "../lex/anaLex.h"
 
-#define TAM_TABELA 100
+// --- Enums ---
+typedef enum { GLOBAL, LOCAL } ESCOPO;
+typedef enum { INT_, REAL_, CHAR_, BOOL_, NA_TIPO } TIPO;
+typedef enum { VAR_GLOBAL, VAR_LOCAL, PROC, PROC_PAR, PROT_ } IDCATEGORIA;
+typedef enum { VIVO, ZUMBI_ } ZUMBI;
 
-// Categoria do símbolo
-typedef enum {
-    CAT_VAR,
-    CAT_FUNC,
-    CAT_PARAM,
-    CAT_PROT // Protótipo de função
-} Categoria;
+// --- Structs ---
+typedef struct tokenInfo {
+    char lexema[31];
+    ESCOPO escopo;
+    TIPO tipo;
+    IDCATEGORIA idcategoria;
+    ZUMBI zumbi;
+} TokenInfo;
 
-// Estrutura para informações da função
-typedef struct {
-    int num_parametros;
-    int tipos_parametros[10]; 
-} FuncInfo;
+typedef struct tabela {
+    int topo;
+    TokenInfo tokensTab[1024];
+} Tabela;
 
-// Estrutura de um símbolo na tabela
-typedef struct {
-    char id[100];       // Nome do identificador
-    Categoria categoria;  // var, func, param...
-    int tipo;           // int, float, char (usando os códigos de PR_ da anaLex)
-    int nivel_lexico;   // Nível do escopo onde foi declarado
-    int deslocamento;   // Deslocamento de memória (para geração de código)
+// --- Interface Pública ---
+extern Tabela tabela;
 
-    union {
-        FuncInfo func;
-    } info;
+void printarTabela(int pos);
+void limparTabela();
+void resetTokenInfo(TokenInfo *token);
+void retirarLocais();
+void matarZumbis(int procPos);
 
-} SIMBOLO;
-
-// Estrutura da Tabela de Símbolos
-typedef struct {
-    SIMBOLO simbolos[TAM_TABELA];
-    int tamanho;
-    int escopo_atual;
-} TabelaSimbolos;
-
-// --- Funções Públicas ---
-
-TabelaSimbolos inicializa_tabela();
-void abre_escopo(TabelaSimbolos *ts);
-void fecha_escopo(TabelaSimbolos *ts);
-void insere_simbolo(TabelaSimbolos *ts, SIMBOLO s);
-SIMBOLO* busca_simbolo(TabelaSimbolos *ts, char *id);
-void imprime_tabela(TabelaSimbolos ts);
-void erro_semantico(char* msg, int linha);
-
-// Funções específicas para manipulação de funções
-void incrementa_num_param(TabelaSimbolos *ts, char *id_func);
-void set_tipo_param(TabelaSimbolos *ts, char *id_func, int tipo_param);
+// Protótipos refatorados
+bool inserirNaTabela(TokenInfo token);
+bool buscaDeclRep(TokenInfo token);
+TokenInfo* buscaDecl(char *lexema);
 
 #endif
