@@ -21,11 +21,9 @@
 FILE *fd;
 TOKEN t, tLookahead;
 char TABS[200] = "";
+bool modoPanico = false;
+bool houveErroSintatico = false;
 TabelaSimbolos ts; 
-
-// --- Variáveis para Análise Semântica ---
-TokenInfo current_token_info;
-ESCOPO current_scope = GLOBAL;
 
 // --- Protótipos de Funções Auxiliares Locais ---
 void nextToken();
@@ -33,7 +31,7 @@ void error(char msg[]);
 void aumenta_ident();
 void diminui_ident();
 void print_folha(TOKEN tk);
-void 
+void sincroniza();
 
 // Protótipos do Parser (alguns precisam de novos parâmetros)
 void Prog();
@@ -60,22 +58,14 @@ void Fator();
 
 // --- Implementação das Funções Auxiliares ---
 
-TIPO token_to_tipo(int token_code) {
-    switch (token_code) {
-        case PR_INT: return INT_;
-        case PR_FLOAT: return REAL_;
-        case PR_CHAR: return CHAR_;
-        default: return NA_TIPO;
-    }
-}
-
 /**
- * @brief Reporta um erro sintático 
+ * @brief Reporta um erro sintático e ativa o modo pânico.
  * @param msg Mensagem de erro a ser exibida.
  */
 void error(char msg[]) {
-    printf("[ERRO | Linha %d]: %s\n", contLinha, msg);
-    exit(1);
+    printf("[ERRO SINTATICO | Linha %d]: %s\n", contLinha, msg);
+    modoPanico = true;
+    houveErroSintatico = true;
 }
 
 /**
@@ -124,12 +114,50 @@ void nextToken() {
 }
 
 /**
+ * @brief Implementa a recuperação de erro no "modo pânico".
+ */
+
+void sincroniza() {
+    bool pontoEncontrado = false; 
+
+    while (t.cat != END_FILE && !pontoEncontrado) {
+        if (t.cat == END_EXPRESSION) {
+            nextToken();
+            pontoEncontrado = true;
+        }
+        else if (t.cat == SN && t.codigo == FECHA_CHAVE) {
+            pontoEncontrado = true;
+        }
+        else if (t.cat == RESERVED_WORD) {
+            switch(t.codigo) {
+                case PR_IF:
+                case PR_WHILE:
+                case PR_FOR:
+                case PR_RETURN:
+                case PR_INT:
+                case PR_FLOAT:
+                case PR_CHAR:
+                case PR_STRING:
+                    pontoEncontrado = true;
+                    break; 
+                default:
+                    nextToken();
+            }
+        } else {
+            nextToken();
+        }
+    }
+    modoPanico = false;
+}
+
+/**
  * @brief Consome o token atual se ele corresponder à categoria e código esperados.
  * @param categoria Categoria do token esperado.
  * @param codigo Código do token esperado (relevante para SN e RESERVED_WORD).
  */
 
 void consome(int categoria, int codigo) {
+    if (modoPanico) return;
 
     if ((int)t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
         print_folha(t);
@@ -219,7 +247,7 @@ DECL_SINALIZADOR Decl() {
     if (!Tipo()) {
         error("Esperado um tipo (int, float, char, etc) no inicio da declaracao.");
         nextToken();
-        
+        sincroniza();
         return NO_DECL;
     }
 
@@ -227,7 +255,7 @@ DECL_SINALIZADOR Decl() {
     nextToken(); 
     if (t.cat != ID) {
         error("Identificador esperado apos o tipo.");
-        
+        sincroniza();
         return NO_DECL;
     }
 
@@ -375,18 +403,13 @@ void Cmd() {
     }
 }
 
+// --- Funções para Comandos Específicos (if, while, etc.)
+// Estas funções seguem o padrão de consumir os tokens de acordo com a regra da gramática
+
 void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
     consome(SN, ABRE_PARENTESES);
-    
-    TIPO tipo_condicao = Expr();
-    
-    if (tipo_condicao != BOOL_) {
-        if (tipo_condicao != INT_) { 
-            erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano.", contLinha);
-        }
-    }
-    
+    Expr();
     consome(SN, FECHA_PARENTESES);
     Cmd();
     if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
@@ -398,13 +421,7 @@ void Cmd_if() {
 void Cmd_while() {
     consome(RESERVED_WORD, PR_WHILE);
     consome(SN, ABRE_PARENTESES);
-    
-    TIPO tipo_condicao = Expr();
-    
-    if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
-        erro_semantico("A expressao na condicional de um 'while' deve ser do tipo booleano ou inteiro.", contLinha);
-    }
-
+    Expr();
     consome(SN, FECHA_PARENTESES);
     Cmd();
 }
@@ -412,28 +429,13 @@ void Cmd_while() {
 void Cmd_for() {
     consome(RESERVED_WORD, PR_FOR);
     consome(SN, ABRE_PARENTESES);
-    
-    if (t.cat != END_EXPRESSION) {
-        Expr();
-    }
+    if(t.cat != END_EXPRESSION) Expr();
     consome(END_EXPRESSION, 0);
-    
-
-    if (t.cat != END_EXPRESSION) {
-        TIPO tipo_condicao = Expr();
-        
-        if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
-            erro_semantico("A expressao na condicional de um 'for' deve ser do tipo booleano ou inteiro.", contLinha);
-        }
-    }
+    if(t.cat != END_EXPRESSION) Expr();
     consome(END_EXPRESSION, 0);
-
-    if (t.cat != SN || t.codigo != FECHA_PARENTESES) {
-        Expr();
-    }
+    if(t.cat != SN || t.codigo != FECHA_PARENTESES) Expr();
     consome(SN, FECHA_PARENTESES);
-    
-    Cmd(); 
+    Cmd();
 }
 
 void Cmd_return() {
@@ -456,6 +458,10 @@ void Cmd_bloco() {
     consome(SN, ABRE_CHAVE);
 
     while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
+        if (modoPanico) {
+            sincroniza();
+            if (t.cat == SN && t.codigo == FECHA_CHAVE) break;
+        }
         Cmd();
     }
     consome(SN, FECHA_CHAVE);
@@ -492,41 +498,20 @@ void Expr_e() {
     }
 }
 
-TIPO Expr_relacional() {
-    TIPO tipo_esq = Expr_aditiva();
-     if (t.cat == SN && (t.codigo == OP_IGUAL || t.codigo == OP_DIFERENTE || /* ... outros ... */)) {
+void Expr_relacional() {
+    Expr_aditiva();
+    while (t.cat == SN && (t.codigo == OP_IGUAL || t.codigo == OP_DIFERENTE || t.codigo == OP_MAIOR || t.codigo == OP_MAIOR_IGUAL || t.codigo == OP_MENOR || t.codigo == OP_MENOR_IGUAL)) {
         consome(SN, t.codigo);
-        TIPO tipo_dir = Expr_aditiva();
-        
-        if (!((tipo_esq == INT_ || tipo_esq == CHAR_ || tipo_esq == REAL_) && tipo_esq == tipo_dir)) {
-             erro_semantico("Tipos incompativeis para operacao relacional.", contLinha);
-        }
-        
-        return BOOL_; 
+        Expr_aditiva();
     }
-    return tipo_esq;
 }
 
-TIPO Expr_aditiva() {
-    TIPO tipo_esq = Expr_multiplicativa(); // Pega o tipo do primeiro operando
+void Expr_aditiva() {
+    Expr_multiplicativa();
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         consome(SN, t.codigo);
-        TIPO tipo_dir = Expr_multiplicativa(); // Pega o tipo do segundo operando
-
-        // --- CHECAGEM DE TIPO SEMÂNTICA ---
-
-        if ((tipo_esq == INT_ || tipo_esq == CHAR_) && (tipo_dir == INT_ || tipo_dir == CHAR_)) {
-            tipo_esq = INT_; 
-        }
-        else if (tipo_esq == REAL_ && tipo_dir == REAL_) {
-            tipo_esq = REAL_
-        }
-        else {
-            erro_semantico("Tipos incompativeis para operacao de adicao/subtracao.", contLinha);
-            tipo_esq = NA_TIPO; // Retorna um tipo de erro
-        }
+        Expr_multiplicativa();
     }
-    return tipo_esq;
 }
 
 void Expr_multiplicativa() {
@@ -538,66 +523,39 @@ void Expr_multiplicativa() {
 }
 
 /**
- * @brief Analisa um fator e RETORNA O SEU TIPO.
+ * @brief Analisa um fator, o elemento mais básico de uma expressão (ID, constante, (expressão)).
  */
-TIPO Fator() {
-    TIPO tipo_retorno = NA_TIPO; // Inicia com um tipo de erro padrão.
-
-    // Trata operadores unários como '!'
-    if (t.cat == SN && t.codigo == OP_NOT) {
+void Fator() {
+    if (t.cat == SN && (t.codigo == OP_NOT || t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         consome(SN, t.codigo);
-        TIPO tipo_fator = Fator();
-        [cite_start]// Regra Semântica: O operando de '!' deve ser booleano (ou compatível com int) [cite: 143]
-        if (tipo_fator != BOOL_ && tipo_fator != INT_) {
-            erro_semantico("O operador '!' exige um operando do tipo booleano ou inteiro.", contLinha);
-        }
-        return BOOL_; // O resultado de '!' [cite_start]é sempre booleano [cite: 137]
-    }
-    // Opcional: Tratar '+' e '-' unários aqui se a gramática os colocasse em 'fator'
-
-    // Trata um ID (variável, constante, chamada de função, acesso a array)
-    else if (t.cat == ID) {
+        Fator();
+    } else if (t.cat == ID) {
         // --- VERIFICAÇÃO DE USO DE IDENTIFICADOR ---
         SIMBOLO* s = busca_simbolo(&ts, t.lexema);
         if (s == NULL) {
             char msg[200];
             sprintf(msg, "Identificador '%s' nao foi declarado.", t.lexema);
             erro_semantico(msg, contLinha);
-            tipo_retorno = NA_TIPO; // Símbolo não existe, tipo desconhecido
-        } else {
-            tipo_retorno = s->tipo; [cite_start]// Tipo base é o do símbolo na tabela [cite: 131]
         }
         
         char id_usado[100];
-        strcpy(id_usado, t.lexema); 
+        strcpy(id_usado, t.lexema); // Salva o nome do ID para verificações futuras
         
         consome(ID, 0);
 
-        // Verifica se é um acesso a array
         if (t.cat == SN && t.codigo == ABRE_COLCHETE) {
-            [cite_start]// Regra Semântica: O tipo do índice deve ser compatível com int [cite: 140]
             consome(SN, ABRE_COLCHETE);
-            TIPO tipo_indice = Expr();
-            if (tipo_indice != INT_ && tipo_indice != CHAR_) {
-                erro_semantico("O indice de um array deve ser um inteiro.", contLinha);
-            }
+            Expr();
             consome(SN, FECHA_COLCHETE);
-            [cite_start]// O tipo da expressão id[expr] é o tipo base do array [cite: 132]
-            // tipo_retorno já foi definido para o tipo do símbolo, o que está correto.
-        } 
-        // Verifica se é uma chamada de função
-        else if (t.cat == SN && t.codigo == ABRE_PARENTESES) { 
+        } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) { 
             if (s != NULL && s->categoria != CAT_FUNC && s->categoria != CAT_PROT) {
                 char msg[200];
-                sprintf(msg, "'%s' nao e uma funcao e nao pode ser chamada.", id_usado);
+                sprintf(msg, "'%s' nao e uma funcao, nao pode ser chamada.", id_usado);
                 erro_semantico(msg, contLinha);
             }
-            [cite_start]// O tipo da expressão id(...) é o tipo de retorno da função [cite: 133]
-            // tipo_retorno já foi definido para o tipo do símbolo, que é o tipo de retorno.
-
+            // A verificação de número/tipo de argumentos seria feita aqui.
             consome(SN, ABRE_PARENTESES);
             if (t.cat != SN || t.codigo != FECHA_PARENTESES) {
-                // A checagem de número e tipo de parâmetros seria feita aqui
                 Expr();
                 while (t.cat == SN && t.codigo == VIRGULA) {
                     consome(SN, VIRGULA);
@@ -606,28 +564,13 @@ TIPO Fator() {
             }
             consome(SN, FECHA_PARENTESES);
         }
-    } 
-    // Trata constantes
-    else if (t.cat == CT_INT) {
+    } else if (t.cat == CT_INT || t.cat == CT_REAL || t.cat == CT_CHAR || t.cat == CT_STRING) {
         consome(t.cat, 0);
-        tipo_retorno = INT_; [cite_start]// O tipo de uma constante inteira é int [cite: 130]
-    } else if (t.cat == CT_REAL) {
-        consome(t.cat, 0);
-        tipo_retorno = REAL_;
-    } else if (t.cat == CT_CHAR) {
-        consome(t.cat, 0);
-        tipo_retorno = CHAR_;
-    }
-    // Trata uma expressão entre parênteses
-    else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
+    } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
         consome(SN, ABRE_PARENTESES);
-        tipo_retorno = Expr(); // O tipo do fator é o tipo da expressão interna
+        Expr();
         consome(SN, FECHA_PARENTESES);
-    } 
-    // Se não for nada do esperado, é um erro
-    else {
+    } else {
         error("Expressao mal formada no fator.");
     }
-    
-    return tipo_retorno;
 }

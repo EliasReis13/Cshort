@@ -65,8 +65,9 @@ enum PALAVRA_RESERVADA {
     PR_RETURN,     // return
     PR_BREAK,      // break
     PR_CONTINUE,   // continue
+    
+    // >>> LINHA ADICIONADA <<<
     PR_VOID        // void
-    PR_BOOL        // bool
 };
 
 // Estrutura que representa um token identificado pelo analisador léxico
