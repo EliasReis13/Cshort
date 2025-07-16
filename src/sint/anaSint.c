@@ -130,7 +130,6 @@ void nextToken() {
  */
 
 void consome(int categoria, int codigo) {
-    if (modoPanico) return;
 
     if ((int)t.cat == categoria && (codigo == 0 || t.codigo == codigo)) {
         print_folha(t);
@@ -431,10 +430,6 @@ void Cmd_bloco() {
     consome(SN, ABRE_CHAVE);
 
     while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
-        if (modoPanico) {
-            
-            if (t.cat == SN && t.codigo == FECHA_CHAVE) break;
-        }
         Cmd();
     }
     consome(SN, FECHA_CHAVE);
