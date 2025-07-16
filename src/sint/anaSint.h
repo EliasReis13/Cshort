@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "../lex/anaLex.h"
+#include "../tabela/tabelaSimbolos.h"
 
 /**
  * @enum DECL_SINALIZADOR
@@ -69,13 +70,13 @@ void Cmd_break();
 void Cmd_continue();
 
 // Análise de Expressões
-void Expr();
-void Expr_atrib();
-void Expr_ou();
-void Expr_e();
-void Expr_relacional();
-void Expr_aditiva();
-void Expr_multiplicativa();
-void Fator();
+TIPO Expr();
+TIPO Expr_atrib();
+TIPO Expr_ou();
+TIPO Expr_e();
+TIPO Expr_relacional();
+TIPO Expr_aditiva();
+TIPO Expr_multiplicativa();
+TIPO Fator();
 
 #endif
