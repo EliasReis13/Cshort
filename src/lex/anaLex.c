@@ -40,6 +40,7 @@ static int reconhecerPalavraReservada(char lexema[]) {
     if (strcmp(lexema, "break") == 0)    return PR_BREAK;
     if (strcmp(lexema, "continue") == 0) return PR_CONTINUE;
     if (strcmp(lexema, "void") == 0)     return PR_VOID;
+    if (strcmp(lexema, "bool") == 0)     return PR_BOOL;
     
     return 0;
 }
