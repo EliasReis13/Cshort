@@ -21,9 +21,11 @@
 FILE *fd;
 TOKEN t, tLookahead;
 char TABS[200] = "";
-bool modoPanico = false;
-bool houveErroSintatico = false;
 TabelaSimbolos ts; 
+
+// --- Variáveis para Análise Semântica ---
+TokenInfo current_token_info;
+ESCOPO current_scope = GLOBAL;
 
 // --- Protótipos de Funções Auxiliares Locais ---
 void nextToken();
@@ -31,7 +33,7 @@ void error(char msg[]);
 void aumenta_ident();
 void diminui_ident();
 void print_folha(TOKEN tk);
-void sincroniza();
+void 
 
 // Protótipos do Parser (alguns precisam de novos parâmetros)
 void Prog();
@@ -58,14 +60,22 @@ void Fator();
 
 // --- Implementação das Funções Auxiliares ---
 
+TIPO token_to_tipo(int token_code) {
+    switch (token_code) {
+        case PR_INT: return INT_;
+        case PR_FLOAT: return REAL_;
+        case PR_CHAR: return CHAR_;
+        default: return NA_TIPO;
+    }
+}
+
 /**
- * @brief Reporta um erro sintático e ativa o modo pânico.
+ * @brief Reporta um erro sintático 
  * @param msg Mensagem de erro a ser exibida.
  */
 void error(char msg[]) {
-    printf("[ERRO SINTATICO | Linha %d]: %s\n", contLinha, msg);
-    modoPanico = true;
-    houveErroSintatico = true;
+    printf("[ERRO | Linha %d]: %s\n", contLinha, msg);
+    exit(1);
 }
 
 /**
@@ -111,43 +121,6 @@ void nextToken() {
     if (t.cat != END_FILE) {
         tLookahead = AnaLex(fd);
     }
-}
-
-/**
- * @brief Implementa a recuperação de erro no "modo pânico".
- */
-
-void sincroniza() {
-    bool pontoEncontrado = false; 
-
-    while (t.cat != END_FILE && !pontoEncontrado) {
-        if (t.cat == END_EXPRESSION) {
-            nextToken();
-            pontoEncontrado = true;
-        }
-        else if (t.cat == SN && t.codigo == FECHA_CHAVE) {
-            pontoEncontrado = true;
-        }
-        else if (t.cat == RESERVED_WORD) {
-            switch(t.codigo) {
-                case PR_IF:
-                case PR_WHILE:
-                case PR_FOR:
-                case PR_RETURN:
-                case PR_INT:
-                case PR_FLOAT:
-                case PR_CHAR:
-                case PR_STRING:
-                    pontoEncontrado = true;
-                    break; 
-                default:
-                    nextToken();
-            }
-        } else {
-            nextToken();
-        }
-    }
-    modoPanico = false;
 }
 
 /**
@@ -247,7 +220,7 @@ DECL_SINALIZADOR Decl() {
     if (!Tipo()) {
         error("Esperado um tipo (int, float, char, etc) no inicio da declaracao.");
         nextToken();
-        sincroniza();
+        
         return NO_DECL;
     }
 
@@ -255,7 +228,7 @@ DECL_SINALIZADOR Decl() {
     nextToken(); 
     if (t.cat != ID) {
         error("Identificador esperado apos o tipo.");
-        sincroniza();
+        
         return NO_DECL;
     }
 
@@ -459,7 +432,7 @@ void Cmd_bloco() {
 
     while (!(t.cat == SN && t.codigo == FECHA_CHAVE) && t.cat != END_FILE) {
         if (modoPanico) {
-            sincroniza();
+            
             if (t.cat == SN && t.codigo == FECHA_CHAVE) break;
         }
         Cmd();
