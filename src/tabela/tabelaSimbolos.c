@@ -5,15 +5,6 @@
 #include "tabelaSimbolos.h"
 
 extern int contLinha;
-extern bool houveErroSemantico;
-
-// Definição da flag de erro semântico
-bool houveErroSemantico = false;
-
-void erro_semantico(char* msg, int linha) {
-    printf("[ERRO SEMANTICO | Linha %d]: %s\n", linha, msg);
-    houveErroSemantico = true;
-}
 
 TabelaSimbolos inicializa_tabela() {
     TabelaSimbolos ts;
@@ -50,34 +41,27 @@ SIMBOLO* busca_escopo_atual(TabelaSimbolos *ts, char *id) {
     return NULL;
 }
 
-void insere_simbolo(TabelaSimbolos *ts, SIMBOLO s) {
+bool insere_simbolo(TabelaSimbolos *ts, SIMBOLO s) {
     if (ts->tamanho >= TAM_TABELA) {
-        erro_semantico("Tabela de simbolos cheia!", contLinha);
-        exit(1);
+        // erro_semantico("Tabela de simbolos cheia!", contLinha); // Será tratado no anaSint
+        return false;
     }
-
-    // Verifica se já existe um símbolo com mesmo nome no escopo atual
     if (busca_escopo_atual(ts, s.id) != NULL) {
-        char msg[200];
-        sprintf(msg, "Redeclaracao do identificador '%s'.", s.id);
-        erro_semantico(msg, contLinha);
-        return; // Não insere para evitar duplicatas no mesmo escopo
+        return false; // Falha: Símbolo já existe
     }
-
     s.nivel_lexico = ts->escopo_atual;
     ts->simbolos[ts->tamanho++] = s;
+    return true; // Sucesso
 }
 
 SIMBOLO* busca_simbolo(TabelaSimbolos *ts, char *id) {
-    // Procura do escopo mais interno para o mais externo
     for (int i = ts->tamanho - 1; i >= 0; i--) {
         if (strcmp(ts->simbolos[i].id, id) == 0) {
             return &ts->simbolos[i];
         }
     }
-    return NULL; // Não encontrou
+    return NULL;
 }
-
 void incrementa_num_param(TabelaSimbolos *ts, char *id_func) {
     SIMBOLO* func = busca_simbolo(ts, id_func);
     if (func && (func->categoria == CAT_FUNC || func->categoria == CAT_PROT)) {
