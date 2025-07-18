@@ -14,7 +14,8 @@ if [ $? -eq 0 ]; then
     echo "▶️ Executando cshort.out com arquivo de teste..."
 
     # Executa o compilador com um arquivo de teste
-    ./bin/cshort.out test/teste_erro3.cshort
+    ./bin/cshort.out test/teste_sem_erros.cshort
+ 
 else
     echo "❌ Erro na compilação!"
 fi
