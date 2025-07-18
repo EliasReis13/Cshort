@@ -1,5 +1,5 @@
 int g_iteracoes;
-float g_resultado_final;
+int g_resultado_final;
 
 void processa_dados(int valor_inicial);
 int calcula_fatorial(int n);
@@ -22,9 +22,9 @@ void processa_dados(int valor_inicial) {
 
     while (g_iteracoes < 3) {
         if (g_resultado_final > 10) {
-            g_resultado_final = g_resultado_final / 2.0;
+            g_resultado_final = g_resultado_final / 2; 
         } else {
-            g_resultado_final = g_resultado_final + 1.0;
+            g_resultado_final = g_resultado_final + 1; 
         }
         g_iteracoes = g_iteracoes + 1;
     }
