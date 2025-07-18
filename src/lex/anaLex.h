@@ -48,7 +48,6 @@ enum SINAIS {
     ABRE_CHAVE,         // '{'
     FECHA_CHAVE,        // '}'
     VIRGULA             // ','
-    // NÃO PRECISAMOS DE PONTO_VIRGULA AQUI, POIS SEU LÉXICO JÁ USA END_EXPRESSION
 };
 
 
