@@ -79,12 +79,15 @@ void set_tipo_param(TabelaSimbolos *ts, char *id_func, TIPO tipo_param) {
     }
 }
 
-// Função para gerar rótulos >>>
+// Função para gerar rótulos 
 char* geraRotulo() {
     static int contador_rotulo = 0;
-    static char buffer_rotulo[20];
+    char* buffer_rotulo = malloc(20 * sizeof(char)); 
+    if (buffer_rotulo == NULL) {
+        exit(1);
+    }
     sprintf(buffer_rotulo, "L%d", contador_rotulo++);
-    return buffer_rotulo;
+    return buffer_rotulo; 
 }
 
 
@@ -102,12 +105,12 @@ const char* get_classe_string(Categoria cat) {
 // Função para converter o código do tipo em uma string legível
 const char* get_tipo_string(TIPO tipo) {
     switch (tipo) {
-        case PR_INT:    return "Inteiro";
-        case PR_FLOAT:  return "Float";
-        case PR_CHAR:   return "Char";
-        case PR_STRING: return "String";
-        case PR_VOID:   return "Void";
-        default:        return "N/A";
+        case INT_:    return "Inteiro";
+        case REAL_:   return "Float";
+        case CHAR_:   return "Char";
+        case BOOL_:   return "Booleano";
+        case VOID_:   return "Void";
+        default:      return "N/A";
     }
 }
 
@@ -117,15 +120,14 @@ void imprime_tabela(TabelaSimbolos ts) {
     printf("-----------------------------------------------------------\n");
 
     for (int i = 0; i < ts.tamanho; i++) {
-        // Busca as strings correspondentes para classe e tipo
         const char* classe_str = get_classe_string(ts.simbolos[i].categoria);
-        const char* tipo_str = get_tipo_string(ts.simbolos[i].tipo);
+        const char* tipo_str = get_tipo_string(ts.simbolos[i].tipo); 
 
         printf("%-20s | %-6d | %-12s | %-10s\n",
-               ts.simbolos[i].id,           // LEXEMA
-               ts.simbolos[i].nivel_lexico, // ESCOPO
-               classe_str,                  // CLASSE
-               tipo_str                     // TIPO
+               ts.simbolos[i].id,
+               ts.simbolos[i].nivel_lexico,
+               classe_str,
+               tipo_str
         );
     }
     printf("-----------------------------------------------------------\n\n");
