@@ -91,7 +91,12 @@ void Prog() {
     imprime_tabela(ts); 
 }
 
-// Emitir uma instrução de máquina de pilha
+/**
+ * @brief Função auxiliar para emitir uma instrução para a máquina de pilha.
+ * @param op A operação (LOAD, ADD)
+ * @param arg O argumento da operação 
+ */
+
 void gera_codigo(char* op, char* arg) {
     if (arg != NULL) {
         printf("%s %s\n", op, arg);
@@ -242,15 +247,15 @@ void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
     consome(SN, ABRE_PARENTESES);
     
+    // Verifica o tipo da condição.
     TIPO tipo_condicao = Expr();
-
     if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
-        erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano ou inteiro.", contLinha);
+        erro_semantico("A expressao na condicional de um 'if' deve ser booleana ou inteira.", contLinha);
     }
-
+    
     consome(SN, FECHA_PARENTESES);
 
-    // Geração de código para if / if else 
+    // Esquema de tradução para if/if-else.
     char* rotulo_else = geraRotulo();
     char* rotulo_fim = NULL;
 
@@ -260,41 +265,52 @@ void Cmd_if() {
 
     if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
         consome(RESERVED_WORD, PR_ELSE);
-        
         rotulo_fim = geraRotulo();
+
         gera_codigo("JUMP", rotulo_fim); 
         
-        gera_codigo("LABEL", rotulo_else); 
-        Cmd(); // Gera o código para o bloco 'else'
+        gera_codigo("LABEL", rotulo_else);
+        Cmd();
         
         gera_codigo("LABEL", rotulo_fim); 
     } else {
-        // Caso de 'if' sem 'else'
+
         gera_codigo("LABEL", rotulo_else);
     }
 }
+/**
+ * @brief Analisa o comando 'while'.
+ *
+ */
+ 
 void Cmd_while() {
     consome(RESERVED_WORD, PR_WHILE);
     
-    // Geração do código para while
+    // Prepara os rótulos do laço.
     char* rotulo_inicio = geraRotulo();
     char* rotulo_fim = geraRotulo();
 
     gera_codigo("LABEL", rotulo_inicio);
+
     consome(SN, ABRE_PARENTESES);
     
-    Expr(); 
+    // Verifica o tipo da condição.
+    TIPO tipo_condicao = Expr(); // A chamada também gera o código da condição.
+    if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
+        erro_semantico("A expressao na condicional de um 'while' deve ser booleana ou inteira.", contLinha);
+    }
     
     consome(SN, FECHA_PARENTESES);
 
     gera_codigo("JUMP_FALSE", rotulo_fim); 
 
-    Cmd();
+    Cmd(); // Gera código para o corpo do laço.
 
     gera_codigo("JUMP", rotulo_inicio);
 
-    gera_codigo("LABEL", rotulo_fim); 
+    gera_codigo("LABEL", rotulo_fim); // Ponto de saída do laço.
 }
+
 
 void Cmd_for() {
     consome(RESERVED_WORD, PR_FOR); consome(SN, ABRE_PARENTESES);
@@ -418,6 +434,12 @@ TIPO Expr_multiplicativa() {
     }
     return tipo_esq;
 }
+
+/**
+ * @brief Analisa um fator, o elemento base de uma expressão.
+ *
+ * @return TIPO O tipo semântico do fator analisado.
+ */
 
 TIPO Fator() {
 
