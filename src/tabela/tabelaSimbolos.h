@@ -52,6 +52,8 @@ typedef struct {
     int escopo_atual;
 } TabelaSimbolos;
 
+extern TabelaSimbolos ts;
+
 // Interface Pública
 TabelaSimbolos inicializa_tabela();
 void abre_escopo(TabelaSimbolos *ts);

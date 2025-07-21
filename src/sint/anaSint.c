@@ -338,8 +338,8 @@ TIPO Expr_atrib() {
     TIPO tipo_esq = Expr_ou();
     if (t.cat == SN && t.codigo == OP_ATRIBUICAO) {
         consome(SN, OP_ATRIBUICAO);
-        int tipo_dir = Expr_atrib();
-        if (tipo_esq != tipo_dir && !(tipo_esq == PR_INT && tipo_dir == PR_CHAR) && !(tipo_esq == PR_CHAR && tipo_dir == PR_INT)) {
+        TIPO tipo_dir = Expr_atrib(); 
+        if (tipo_esq != tipo_dir && !(tipo_esq == INT_ && tipo_dir == CHAR_) && !(tipo_esq == CHAR_ && tipo_dir == INT_)) { 
             erro_semantico("Tipos incompativeis para atribuicao.", contLinha);
         }
         return tipo_esq;
@@ -351,11 +351,11 @@ TIPO Expr_ou() {
     TIPO tipo_esq = Expr_e();
     while (t.cat == SN && t.codigo == OP_OR) {
         consome(SN, OP_OR);
-        int tipo_dir = Expr_e();
-        if ((tipo_esq != PR_BOOL && tipo_esq != PR_INT) || (tipo_dir != PR_BOOL && tipo_dir != PR_INT)) {
+        TIPO tipo_dir = Expr_e(); 
+        if ((tipo_esq != BOOL_ && tipo_esq != INT_) || (tipo_dir != BOOL_ && tipo_dir != INT_)) { 
             erro_semantico("Operador '||' exige operandos do tipo booleano ou inteiro.", contLinha);
         }
-        tipo_esq = PR_BOOL;
+        tipo_esq = BOOL_; 
     }
     return tipo_esq;
 }
@@ -364,28 +364,24 @@ TIPO Expr_e() {
     TIPO tipo_esq = Expr_relacional();
     while (t.cat == SN && t.codigo == OP_AND) {
         consome(SN, OP_AND);
-        int tipo_dir = Expr_relacional();
-        if ((tipo_esq != PR_BOOL && tipo_esq != PR_INT) || (tipo_dir != PR_BOOL && tipo_dir != PR_INT)) {
+        TIPO tipo_dir = Expr_relacional(); 
+        if ((tipo_esq != BOOL_ && tipo_esq != INT_) || (tipo_dir != BOOL_ && tipo_dir != INT_)) {
             erro_semantico("Operador '&&' exige operandos do tipo booleano ou inteiro.", contLinha);
         }
-        tipo_esq = PR_BOOL;
+        tipo_esq = BOOL_;
     }
     return tipo_esq;
 }
 
 TIPO Expr_relacional() {
     TIPO tipo_esq = Expr_aditiva();
-
     if (t.cat == SN && (t.codigo >= OP_MAIOR && t.codigo <= OP_DIFERENTE)) {
         int op = t.codigo;
-        
         consome(SN, t.codigo);
         TIPO tipo_dir = Expr_aditiva();
-
         if (tipo_esq != tipo_dir) { 
             erro_semantico("Tipos incompativeis para operacao relacional.", contLinha); 
         }
-
         switch (op) {
             case OP_IGUAL:       gera_codigo("EQ", NULL); break;
             case OP_DIFERENTE:   gera_codigo("NE", NULL); break;
@@ -394,26 +390,24 @@ TIPO Expr_relacional() {
             case OP_MENOR:       gera_codigo("LT", NULL); break;
             case OP_MENOR_IGUAL: gera_codigo("LTE", NULL); break;
         }
-        
         return BOOL_;
     }
-    
     return tipo_esq;
 }
+
 TIPO Expr_aditiva() {
-    TIPO tipo_esq = Expr_multiplicativa();  // Analisa e obtém o tipo do operação a esquerda
+    TIPO tipo_esq = Expr_multiplicativa();
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
+        int op = t.codigo;
         consome(SN, t.codigo);
-        TIPO tipo_dir = Expr_multiplicativa(); // Analisa e obtém o tipo do operação a direita
-         if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) {
+        TIPO tipo_dir = Expr_multiplicativa();
+        if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) { 
             erro_semantico("Tipos incompativeis para operacao de adicao/subtracao (float com int/char).", contLinha);
             return NA_TIPO; 
         }
-        if (tipo_esq == REAL_ && tipo_dir == REAL_) {
-            tipo_esq = REAL_;
-        } else {
-            tipo_esq = INT_;
-        }
+        if (op == OP_SOMA) gera_codigo("ADD", NULL); else gera_codigo("SUB", NULL);
+        if (tipo_esq == REAL_ || tipo_dir == REAL_) tipo_esq = REAL_; 
+        else tipo_esq = INT_; 
     }
     return tipo_esq;
 }
@@ -421,17 +415,16 @@ TIPO Expr_aditiva() {
 TIPO Expr_multiplicativa() {
     TIPO tipo_esq = Fator();
     while (t.cat == SN && (t.codigo == OP_MULTIPLICACAO || t.codigo == OP_DIVISAO)) {
+        int op = t.codigo;
         consome(SN, t.codigo);
-        int tipo_dir = Fator();
-        if ((tipo_esq == PR_FLOAT && tipo_dir != PR_FLOAT) || (tipo_esq != PR_FLOAT && tipo_dir == PR_FLOAT)) {
+        TIPO tipo_dir = Fator();
+        if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) { 
             erro_semantico("Tipos incompativeis para operacao (float com int/char).", contLinha);
-            return PR_VOID; 
+            return NA_TIPO; 
         }
-        if (tipo_esq == PR_FLOAT || tipo_dir == PR_FLOAT) {
-            tipo_esq = PR_FLOAT;
-        } else {
-            tipo_esq = PR_INT;
-        }
+        if (op == OP_MULTIPLICACAO) gera_codigo("MUL", NULL); else gera_codigo("DIV", NULL);
+        if (tipo_esq == REAL_ || tipo_dir == REAL_) tipo_esq = REAL_;
+        else tipo_esq = INT_;
     }
     return tipo_esq;
 }
