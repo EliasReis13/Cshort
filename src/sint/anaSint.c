@@ -89,6 +89,7 @@ void Prog() {
         }
     }
     imprime_tabela(ts); 
+    fclose(fd);
 }
 
 /**
@@ -317,8 +318,8 @@ void Cmd_for() {
     if(t.cat != END_EXPRESSION) Expr(); 
     consome(END_EXPRESSION, 0);
     if (t.cat != END_EXPRESSION) {
-        int tipo_cond = Expr();
-        if (tipo_cond != PR_BOOL && tipo_cond != PR_INT) {
+        TIPO tipo_cond = Expr();
+        if (tipo_cond != BOOL_ && tipo_cond != INT_) {
             erro_semantico("A expressao na condicional de um 'for' deve ser do tipo booleano ou inteiro.", contLinha);
         }
     }
@@ -406,7 +407,7 @@ TIPO Expr_aditiva() {
         TIPO tipo_dir = Expr_multiplicativa(); // Analisa e obtém o tipo do operação a direita
          if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) {
             erro_semantico("Tipos incompativeis para operacao de adicao/subtracao (float com int/char).", contLinha);
-            return NA_TIPO; // Retorna um tipo de erro
+            return NA_TIPO; 
         }
         if (tipo_esq == REAL_ && tipo_dir == REAL_) {
             tipo_esq = REAL_;
@@ -424,7 +425,7 @@ TIPO Expr_multiplicativa() {
         int tipo_dir = Fator();
         if ((tipo_esq == PR_FLOAT && tipo_dir != PR_FLOAT) || (tipo_esq != PR_FLOAT && tipo_dir == PR_FLOAT)) {
             erro_semantico("Tipos incompativeis para operacao (float com int/char).", contLinha);
-            return PR_VOID; // Tipo de erro
+            return PR_VOID; 
         }
         if (tipo_esq == PR_FLOAT || tipo_dir == PR_FLOAT) {
             tipo_esq = PR_FLOAT;
@@ -452,11 +453,14 @@ TIPO Fator() {
             sprintf(msg, "Identificador '%s' nao foi declarado.", t.lexema);
             erro_semantico(msg, contLinha);
             consome(ID, 0);
-            return NA_TIPO; // Tipo de erro
+            return NA_TIPO; 
         }
         
         tipo_retorno = s->tipo;
         
+        // Instrução apra varregar a variável na pilha
+        gera_codigo("LOAD", t.lexema);
+
         char id_usado[100];
         strcpy(id_usado, t.lexema);
         consome(ID, 0);
@@ -480,21 +484,36 @@ TIPO Fator() {
         return tipo_retorno;
 
     } else if (t.cat == CT_INT) {
+        char valor_str[20];
+        sprintf(valor_str, "%d", t.int_value);
+
+        gera_codigo("PUSH", valor_str);
+
         consome(t.cat, 0);
-        return INT_;
-    } else if (t.cat == CT_REAL) { // <<< CORREÇÃO: Era CT_FLOAT, agora é CT_REAL
+        return INT_;       
+    } else if (t.cat == CT_REAL) { 
+        char valor_str[30];
+        sprintf(valor_str, "%f", t.real_value);
+        gera_codigo("PUSH", valor_str);
         consome(t.cat, 0);
-        return REAL_;
+        
+        return REAL_;        
     } else if (t.cat == CT_CHAR) {
+        char valor_str[5];
+        sprintf(valor_str, "%d", t.int_value); 
+        gera_codigo("PUSH", valor_str);
         consome(t.cat, 0);
-        return CHAR_;
+        
+        return CHAR_;       
+
     } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
         consome(SN, ABRE_PARENTESES);
         TIPO tipo_expr = Expr();
         consome(SN, FECHA_PARENTESES);
         return tipo_expr;
+
     } else {
         error("Expressao mal formada no fator.");
     }
-    return NA_TIPO; // Retorno de erro padrão
+    return NA_TIPO; 
 }
