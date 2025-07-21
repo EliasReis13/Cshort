@@ -242,17 +242,21 @@ void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
     consome(SN, ABRE_PARENTESES);
     
-    Expr();
+    TIPO tipo_condicao = Expr();
+
+    if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
+        erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano ou inteiro.", contLinha);
+    }
 
     consome(SN, FECHA_PARENTESES);
 
-    // Geração de código para if / if else
+    // Geração de código para if / if else 
     char* rotulo_else = geraRotulo();
     char* rotulo_fim = NULL;
 
     gera_codigo("JUMP_FALSE", rotulo_else); 
     
-    Cmd();
+    Cmd(); 
 
     if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
         consome(RESERVED_WORD, PR_ELSE);
@@ -261,15 +265,14 @@ void Cmd_if() {
         gera_codigo("JUMP", rotulo_fim); 
         
         gera_codigo("LABEL", rotulo_else); 
-        Cmd(); 
+        Cmd(); // Gera o código para o bloco 'else'
         
         gera_codigo("LABEL", rotulo_fim); 
     } else {
-        
+        // Caso de 'if' sem 'else'
         gera_codigo("LABEL", rotulo_else);
     }
-}   
-
+}
 void Cmd_while() {
     consome(RESERVED_WORD, PR_WHILE);
     
@@ -381,18 +384,18 @@ TIPO Expr_relacional() {
     return tipo_esq;
 }
 TIPO Expr_aditiva() {
-    TIPO tipo_esq = Expr_multiplicativa();
+    TIPO tipo_esq = Expr_multiplicativa();  // Analisa e obtém o tipo do operação a esquerda
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         consome(SN, t.codigo);
-        int tipo_dir = Expr_multiplicativa();
-        if ((tipo_esq == PR_FLOAT && tipo_dir != PR_FLOAT) || (tipo_esq != PR_FLOAT && tipo_dir == PR_FLOAT)) {
-            erro_semantico("Tipos incompativeis para operacao (float com int/char).", contLinha);
-            return PR_VOID; // Tipo de erro
+        TIPO tipo_dir = Expr_multiplicativa(); // Analisa e obtém o tipo do operação a direita
+         if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) {
+            erro_semantico("Tipos incompativeis para operacao de adicao/subtracao (float com int/char).", contLinha);
+            return NA_TIPO; // Retorna um tipo de erro
         }
-        if (tipo_esq == PR_FLOAT || tipo_dir == PR_FLOAT) {
-            tipo_esq = PR_FLOAT;
+        if (tipo_esq == REAL_ && tipo_dir == REAL_) {
+            tipo_esq = REAL_;
         } else {
-            tipo_esq = PR_INT;
+            tipo_esq = INT_;
         }
     }
     return tipo_esq;
