@@ -6,7 +6,26 @@
 
 #define TAM_TABELA 100
 
-typedef enum { INT_, REAL_, CHAR_, BOOL_, VOID_, NA_TIPO } TIPO;
+//================================================================================
+// Definições de Tipos para Análise Semântica (Atividade 3)
+//================================================================================
+
+/**
+ * @brief Enumeração dos tipos de dados semânticos da linguagem Cshort.
+ *
+ * As funções de análise de expressão 
+ * retornarão um valor deste tipo.
+ */
+
+typedef enum {
+    INT_,     // Inteiro
+    REAL_,    // Ponto Flutuante
+    CHAR_,    // Caractere
+    BOOL_,    // Booleano 
+    VOID_,    // Vazio
+    NA_TIPO   // Representa um tipo de erro ou não aplicável
+} TIPO;
+
 typedef enum { CAT_VAR, CAT_FUNC, CAT_PARAM, CAT_PROT } Categoria;
 typedef enum { PASS_POR_VALOR, PASS_POR_REFERENCIA } Passagem;
 
