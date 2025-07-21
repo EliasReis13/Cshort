@@ -69,15 +69,24 @@ void incrementa_num_param(TabelaSimbolos *ts, char *id_func) {
     }
 }
 
-void set_tipo_param(TabelaSimbolos *ts, char *id_func, int tipo_param) {
+void set_tipo_param(TabelaSimbolos *ts, char *id_func, TIPO tipo_param) {
     SIMBOLO* func = busca_simbolo(ts, id_func);
     if (func && (func->categoria == CAT_FUNC || func->categoria == CAT_PROT)) {
         int index = func->info.func.num_parametros;
-        if (index < 10) { // Limite de parâmetros (definido em FuncInfo)
+        if (index < 10) {
             func->info.func.tipos_parametros[index] = tipo_param;
         }
     }
 }
+
+// Função para gerar rótulos >>>
+char* geraRotulo() {
+    static int contador_rotulo = 0;
+    static char buffer_rotulo[20];
+    sprintf(buffer_rotulo, "L%d", contador_rotulo++);
+    return buffer_rotulo;
+}
+
 
 // Função para converter o código da categoria em uma string legível
 const char* get_classe_string(Categoria cat) {
@@ -91,7 +100,7 @@ const char* get_classe_string(Categoria cat) {
 }
 
 // Função para converter o código do tipo em uma string legível
-const char* get_tipo_string(int tipo) {
+const char* get_tipo_string(TIPO tipo) {
     switch (tipo) {
         case PR_INT:    return "Inteiro";
         case PR_FLOAT:  return "Float";

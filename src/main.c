@@ -11,29 +11,16 @@
  */
 
 int main(int argc, char *argv[]) {
-    // Verifica se um nome de arquivo foi passado como argumento
     if (argc < 2) {
-        printf("Uso: %s <arquivo_fonte.cshort>\n", argv[0]);
+        printf("Uso: %s <arquivo.cshort>\n", argv[0]);
         return 1;
     }
-
-    // Tenta abrir o arquivo passado como argumento
-    fd = fopen(argv[1], "r"); 
-    if (!fd) {
-        printf("Nao consegui abrir o arquivo '%s'.\n", argv[1]);
-        return 1;
-    }
-
-    // Chama a função inicial do Analisador Sintático
-    Prog();
-
-    printf("\nAnalise sintatica concluida.\n");
+    Prog(argv[1]); 
+    
     if (houveErroSintatico) {
-        printf("Foram encontrados erros sintaticos.\n");
-    } else {
-        printf("Nenhum erro sintatico encontrado.\n");
+        printf("\nAnalise concluida com erros.\n");
+        return 1;
     }
-
-    fclose(fd); // Fecha o arquivo
+    printf("\nAnalise concluida com sucesso!\n");
     return 0;
 }

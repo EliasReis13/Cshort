@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "anaSint.h"
+#include "../tabela/tabelaSimbolos.h"
 
 // --- Definição das Variáveis Globais ---
 FILE *fd;
@@ -89,6 +90,16 @@ void Prog() {
     }
     imprime_tabela(ts); 
 }
+
+// Emitir uma instrução de máquina de pilha
+void gera_codigo(char* op, char* arg) {
+    if (arg != NULL) {
+        printf("%s %s\n", op, arg);
+    } else {
+        printf("%s\n", op);
+    }
+}
+
 
 void corpo_func() {
     abre_escopo(&ts);
@@ -228,22 +239,58 @@ void Cmd_bloco() {
 }
 
 void Cmd_if() {
-    consome(RESERVED_WORD, PR_IF); consome(SN, ABRE_PARENTESES);
-    int tipo_cond = Expr();
-    if (tipo_cond != PR_BOOL && tipo_cond != PR_INT) {
-        erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano ou inteiro.", contLinha);
+    consome(RESERVED_WORD, PR_IF);
+    consome(SN, ABRE_PARENTESES);
+    
+    Expr();
+
+    consome(SN, FECHA_PARENTESES);
+
+    // Geração de código para if / if else
+    char* rotulo_else = geraRotulo();
+    char* rotulo_fim = NULL;
+
+    gera_codigo("JUMP_FALSE", rotulo_else); 
+    
+    Cmd();
+
+    if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
+        consome(RESERVED_WORD, PR_ELSE);
+        
+        rotulo_fim = geraRotulo();
+        gera_codigo("JUMP", rotulo_fim); 
+        
+        gera_codigo("LABEL", rotulo_else); 
+        Cmd(); 
+        
+        gera_codigo("LABEL", rotulo_fim); 
+    } else {
+        
+        gera_codigo("LABEL", rotulo_else);
     }
-    consome(SN, FECHA_PARENTESES); Cmd();
-    if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) { consome(RESERVED_WORD, PR_ELSE); Cmd(); }
-}
+}   
 
 void Cmd_while() {
-    consome(RESERVED_WORD, PR_WHILE); consome(SN, ABRE_PARENTESES);
-    int tipo_cond = Expr();
-    if (tipo_cond != PR_BOOL && tipo_cond != PR_INT) {
-        erro_semantico("A expressao na condicional de um 'while' deve ser do tipo booleano ou inteiro.", contLinha);
-    }
-    consome(SN, FECHA_PARENTESES); Cmd();
+    consome(RESERVED_WORD, PR_WHILE);
+    
+    // Geração do código para while
+    char* rotulo_inicio = geraRotulo();
+    char* rotulo_fim = geraRotulo();
+
+    gera_codigo("LABEL", rotulo_inicio);
+    consome(SN, ABRE_PARENTESES);
+    
+    Expr(); 
+    
+    consome(SN, FECHA_PARENTESES);
+
+    gera_codigo("JUMP_FALSE", rotulo_fim); 
+
+    Cmd();
+
+    gera_codigo("JUMP", rotulo_inicio);
+
+    gera_codigo("LABEL", rotulo_fim); 
 }
 
 void Cmd_for() {
@@ -265,10 +312,10 @@ void Cmd_return() { consome(RESERVED_WORD, PR_RETURN); if (t.cat != END_EXPRESSI
 void Cmd_break() { consome(RESERVED_WORD, PR_BREAK); consome(END_EXPRESSION, 0); }
 void Cmd_continue() { consome(RESERVED_WORD, PR_CONTINUE); consome(END_EXPRESSION, 0); }
 
-int Expr() { return Expr_atrib(); }
+TIPO Expr() { return Expr_atrib(); }
 
-int Expr_atrib() {
-    int tipo_esq = Expr_ou();
+TIPO Expr_atrib() {
+    TIPO tipo_esq = Expr_ou();
     if (t.cat == SN && t.codigo == OP_ATRIBUICAO) {
         consome(SN, OP_ATRIBUICAO);
         int tipo_dir = Expr_atrib();
@@ -280,8 +327,8 @@ int Expr_atrib() {
     return tipo_esq;
 }
 
-int Expr_ou() {
-    int tipo_esq = Expr_e();
+TIPO Expr_ou() {
+    TIPO tipo_esq = Expr_e();
     while (t.cat == SN && t.codigo == OP_OR) {
         consome(SN, OP_OR);
         int tipo_dir = Expr_e();
@@ -293,8 +340,8 @@ int Expr_ou() {
     return tipo_esq;
 }
 
-int Expr_e() {
-    int tipo_esq = Expr_relacional();
+TIPO Expr_e() {
+    TIPO tipo_esq = Expr_relacional();
     while (t.cat == SN && t.codigo == OP_AND) {
         consome(SN, OP_AND);
         int tipo_dir = Expr_relacional();
@@ -306,19 +353,35 @@ int Expr_e() {
     return tipo_esq;
 }
 
-int Expr_relacional() {
-    int tipo_esq = Expr_aditiva();
+TIPO Expr_relacional() {
+    TIPO tipo_esq = Expr_aditiva();
+
     if (t.cat == SN && (t.codigo >= OP_MAIOR && t.codigo <= OP_DIFERENTE)) {
+        int op = t.codigo;
+        
         consome(SN, t.codigo);
-        int tipo_dir = Expr_aditiva();
-        if (tipo_esq != tipo_dir) { erro_semantico("Tipos incompativeis para operacao relacional.", contLinha); }
-        return PR_BOOL;
+        TIPO tipo_dir = Expr_aditiva();
+
+        if (tipo_esq != tipo_dir) { 
+            erro_semantico("Tipos incompativeis para operacao relacional.", contLinha); 
+        }
+
+        switch (op) {
+            case OP_IGUAL:       gera_codigo("EQ", NULL); break;
+            case OP_DIFERENTE:   gera_codigo("NE", NULL); break;
+            case OP_MAIOR:       gera_codigo("GT", NULL); break;
+            case OP_MAIOR_IGUAL: gera_codigo("GTE", NULL); break;
+            case OP_MENOR:       gera_codigo("LT", NULL); break;
+            case OP_MENOR_IGUAL: gera_codigo("LTE", NULL); break;
+        }
+        
+        return BOOL_;
     }
+    
     return tipo_esq;
 }
-
-int Expr_aditiva() {
-    int tipo_esq = Expr_multiplicativa();
+TIPO Expr_aditiva() {
+    TIPO tipo_esq = Expr_multiplicativa();
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         consome(SN, t.codigo);
         int tipo_dir = Expr_multiplicativa();
@@ -335,8 +398,8 @@ int Expr_aditiva() {
     return tipo_esq;
 }
 
-int Expr_multiplicativa() {
-    int tipo_esq = Fator();
+TIPO Expr_multiplicativa() {
+    TIPO tipo_esq = Fator();
     while (t.cat == SN && (t.codigo == OP_MULTIPLICACAO || t.codigo == OP_DIVISAO)) {
         consome(SN, t.codigo);
         int tipo_dir = Fator();
@@ -353,7 +416,10 @@ int Expr_multiplicativa() {
     return tipo_esq;
 }
 
-int Fator() {
+TIPO Fator() {
+
+    TIPO tipo_retorno = NA_TIPO;
+
     if (t.cat == ID) {
         SIMBOLO* s = busca_simbolo(&ts, t.lexema);
         if (s == NULL) {
@@ -361,10 +427,11 @@ int Fator() {
             sprintf(msg, "Identificador '%s' nao foi declarado.", t.lexema);
             erro_semantico(msg, contLinha);
             consome(ID, 0);
-            return PR_VOID; // Tipo de erro
+            return NA_TIPO; // Tipo de erro
         }
         
-        int tipo_retorno = s->tipo;
+        tipo_retorno = s->tipo;
+        
         char id_usado[100];
         strcpy(id_usado, t.lexema);
         consome(ID, 0);
@@ -389,20 +456,20 @@ int Fator() {
 
     } else if (t.cat == CT_INT) {
         consome(t.cat, 0);
-        return PR_INT;
+        return INT_;
     } else if (t.cat == CT_REAL) { // <<< CORREÇÃO: Era CT_FLOAT, agora é CT_REAL
         consome(t.cat, 0);
-        return PR_FLOAT;
+        return REAL_;
     } else if (t.cat == CT_CHAR) {
         consome(t.cat, 0);
-        return PR_CHAR;
+        return CHAR_;
     } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
         consome(SN, ABRE_PARENTESES);
-        int tipo_expr = Expr();
+        TIPO tipo_expr = Expr();
         consome(SN, FECHA_PARENTESES);
         return tipo_expr;
     } else {
         error("Expressao mal formada no fator.");
     }
-    return PR_VOID; // Retorno de erro padrão
+    return NA_TIPO; // Retorno de erro padrão
 }

@@ -47,8 +47,6 @@ extern int contLinha;           // Contador de linha atual (originário do anaLe
 extern bool modoPanico;         // Flag que ativa a recuperação de erro
 extern bool houveErroSintatico; // Flag que indica se algum erro ocorreu
 
-// --- Protótipos das Funções do Parser ---
-// Cada função corresponde a um não-terminal da gramática da linguagem Cshort.
 
 // Ponto de entrada e rotinas de alto nível
 void Prog();
@@ -70,13 +68,13 @@ void Cmd_break();
 void Cmd_continue();
 
 // Análise de Expressões
-int Expr();
-int Expr_atrib();
-int Expr_ou();
-int Expr_e();
-int Expr_relacional();
-int Expr_aditiva();
-int Expr_multiplicativa();
-int Fator();
+TIPO Expr();
+TIPO Expr_atrib();
+TIPO Expr_ou();
+TIPO Expr_e();
+TIPO Expr_relacional();
+TIPO Expr_aditiva();
+TIPO Expr_multiplicativa();
+TIPO Fator();
 
 #endif
