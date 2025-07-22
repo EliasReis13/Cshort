@@ -1,6 +1,9 @@
 #ifndef GERADOR_CODIGO_H
 #define GERADOR_CODIGO_H
 
+#define TAM_LINHA 100   
+
+
 /**
  * @brief Adiciona uma instrução de máquina de pilha ao buffer de código.
  * @param instrucao A string completa da instrução (ex: "PUSH 5" ou "ADD").

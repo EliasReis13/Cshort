@@ -6,10 +6,6 @@
 
 #define TAM_TABELA 100
 
-//================================================================================
-// Definições de Tipos para Análise Semântica (Atividade 3)
-//================================================================================
-
 /**
  * @brief Enumeração dos tipos de dados semânticos da linguagem Cshort.
  *
@@ -61,9 +57,8 @@ void fecha_escopo(TabelaSimbolos *ts);
 bool insere_simbolo(TabelaSimbolos *ts, SIMBOLO s);
 SIMBOLO* busca_simbolo(TabelaSimbolos *ts, char *id);
 void imprime_tabela(TabelaSimbolos ts);
-void incrementa_num_param(TabelaSimbolos *ts, char *id_func);
 void set_tipo_param(TabelaSimbolos *ts, char *id_func, TIPO tipo_param);
-char* geraRotulo();
+void incrementa_num_param(TabelaSimbolos *ts, char *id_func);
 
 
 #endif

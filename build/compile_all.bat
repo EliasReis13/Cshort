@@ -1,16 +1,14 @@
 @echo off
-echo Compilando o compilador completo (lexico e sintatico)
+echo Compilando o compilador completo...
 
-if not exist bin mkdir bin
-if not exist out mkdir out
+rem Cria a pasta 'bin' se ela não existir e suprime a mensagem de erro se já existir.
+mkdir bin 2>nul
 
-REM Compila todos os .c juntos. 
-gcc src\lex\anaLex.c src\sint\anaSint.c src\tabela\tabelaSimbolos.c src\main.c -o bin\cshort.exe -Wall -Wextra
+rem Comando GCC com o nome do arquivo corrigido (geradorCodigo.c)
+gcc -o bin/cshort.exe src/main.c src/lex/anaLex.c src/sint/anaSint.c src/tabela/tabelaSimbolos.c src/gerador/geradorCodigo.c -I src
 
-if %errorlevel% equ 0 (
-    echo Compilado com sucesso: bin\cshort.exe
-    echo Executando bin\cshort.exe com arquivo de teste...
-    bin\cshort.exe test\teste_com_erros.cshort
+if %errorlevel% == 0 (
+    echo Compilado com sucesso: bin/cshort.exe
 ) else (
     echo Erro na compilacao!
 )

@@ -4,7 +4,6 @@
 #include "geradorCodigo.h"
 
 #define MAX_CODIGO 1000 // Número máximo de linhas de código que podem ser geradas
-#define TAM_LINHA 100   // Tamanho máximo de uma única instrução
 
 // Buffer para armazenar as instruções da máquina de pilha
 static char codigo[MAX_CODIGO][TAM_LINHA];

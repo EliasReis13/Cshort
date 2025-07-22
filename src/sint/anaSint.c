@@ -14,7 +14,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include "anaSint.h"
-#include "../tabela/tabelaSimbolos.h"
 
 // --- Definição das Variáveis Globais ---
 FILE *fd;
@@ -78,17 +77,33 @@ int Tipo() {
     return 0;
 }
 
-void Prog() {
+// Converte um tipo do léxico (PR_INT) para um tipo semântico (INT_)
+TIPO pr_to_tipo(int pr_code) {
+    switch (pr_code) {
+        case PR_INT: return INT_;
+        case PR_FLOAT: return REAL_;
+        case PR_CHAR: return CHAR_;
+        case PR_BOOL: return BOOL_;
+        case PR_VOID: return VOID_;
+        default: return NA_TIPO;
+    }
+}
+
+void Prog(char* nomeArquivo) {
+    fd = fopen(nomeArquivo, "r");
+    if (!fd) {
+        printf("Nao consegui abrir o arquivo '%s'.\n", nomeArquivo);
+        exit(1);
+    }
     ts = inicializa_tabela(); 
     tLookahead = AnaLex(fd);
     nextToken();
     while (t.cat != END_FILE) {
         DECL_SINALIZADOR flag = Decl();
-        if (flag == DECL_FUNC) {
-            corpo_func();
-        }
+        if (flag == DECL_FUNC) { corpo_func(); }
     }
-    imprime_tabela(ts); 
+    imprime_tabela(ts);
+    salvar_codigo_em_arquivo("out/codigo_gerado.maq"); // Salva o código no final
     fclose(fd);
 }
 
@@ -133,7 +148,7 @@ DECL_SINALIZADOR Decl() {
     if (tLookahead.cat == SN && tLookahead.codigo == ABRE_PARENTESES) {
         SIMBOLO s;
         strcpy(s.id, nome_id);
-        s.tipo = tipo_declarado;
+        s.tipo = pr_to_tipo(tipo_declarado);
         s.categoria = CAT_FUNC;
         s.info.func.num_parametros = 0;
         if (!insere_simbolo(&ts, s)) {
@@ -167,7 +182,7 @@ DECL_SINALIZADOR Decl() {
             
             SIMBOLO s;
             strcpy(s.id, t.lexema);
-            s.tipo = tipo_declarado;
+            s.tipo = pr_to_tipo(tipo_declarado);
             s.categoria = CAT_VAR;
             if (!insere_simbolo(&ts, s)) {
                 char msg[200];
@@ -195,13 +210,13 @@ void Tipos_param(char* nome_funcao) {
     if (Tipo()) {
         while (true) {
             if (!Tipo()) break;
-            int tipo_param = t.codigo;
+            int tipo_param_lexico = t.codigo;
             consome(t.cat, t.codigo);
             
             SIMBOLO p;
-            p.tipo = tipo_param;
+            p.tipo = pr_to_tipo(tipo_param_lexico);
             p.categoria = CAT_PARAM;
-            set_tipo_param(&ts, nome_funcao, tipo_param);
+            set_tipo_param(&ts, nome_funcao, tipo_param_lexico);
 
             if (t.cat == ID) {
                 strcpy(p.id, t.lexema);
@@ -233,6 +248,7 @@ void Cmd() {
     else if (t.cat == RESERVED_WORD && t.codigo == PR_BREAK) Cmd_break();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_CONTINUE) Cmd_continue();
     else if (t.cat == SN && t.codigo == ABRE_CHAVE) { abre_escopo(&ts); Cmd_bloco(); fecha_escopo(&ts); }
+    else if (t.cat == ID && tLookahead.cat == SN && tLookahead.codigo == OP_ATRIBUICAO) {Cmd_atrib();}
     else { Expr(); consome(END_EXPRESSION, 0); }
 }
 
@@ -247,69 +263,74 @@ void Cmd_bloco() {
 void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
     consome(SN, ABRE_PARENTESES);
-    
-    // Verifica o tipo da condição.
-    TIPO tipo_condicao = Expr();
+
+    // Atividade 3: DDS que verifica o tipo da expressão
+    TIPO tipo_condicao = Expr(); // A chamada a Expr() também gera o código para a condição
     if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
-        erro_semantico("A expressao na condicional de um 'if' deve ser booleana ou inteira.", contLinha);
+        erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano ou inteiro.", contLinha);
     }
-    
+
     consome(SN, FECHA_PARENTESES);
 
-    // Esquema de tradução para if/if-else.
-    char* rotulo_else = geraRotulo();
-    char* rotulo_fim = NULL;
+    // Atividade 1: Esquema de tradução para if/if-else.
+    int rotulo_else = novo_rotulo();
+    int rotulo_fim;
+    char instrucao[TAM_LINHA];
 
-    gera_codigo("JUMP_FALSE", rotulo_else); 
-    
-    Cmd(); 
+    snprintf(instrucao, sizeof(instrucao), "JUMP_FALSE L%d", rotulo_else);
+    gera(instrucao);
+
+    Cmd();
 
     if (t.cat == RESERVED_WORD && t.codigo == PR_ELSE) {
         consome(RESERVED_WORD, PR_ELSE);
-        rotulo_fim = geraRotulo();
-
-        gera_codigo("JUMP", rotulo_fim); 
+        rotulo_fim = novo_rotulo();
+        snprintf(instrucao, sizeof(instrucao), "JUMP L%d", rotulo_fim);
+        gera(instrucao);
         
-        gera_codigo("LABEL", rotulo_else);
+        gera_rotulo(rotulo_else);
         Cmd();
-        
-        gera_codigo("LABEL", rotulo_fim); 
+        gera_rotulo(rotulo_fim);
     } else {
-
-        gera_codigo("LABEL", rotulo_else);
+        gera_rotulo(rotulo_else);
     }
 }
+
+
 /**
- * @brief Analisa o comando 'while'.
- *
+ * @brief Analisa 'while', verifica o tipo da condição e gera código de laço.
  */
- 
 void Cmd_while() {
     consome(RESERVED_WORD, PR_WHILE);
     
-    // Prepara os rótulos do laço.
-    char* rotulo_inicio = geraRotulo();
-    char* rotulo_fim = geraRotulo();
+    // Atividade 1: Prepara os rótulos do laço.
+    int rotulo_inicio = novo_rotulo();
+    int rotulo_fim = novo_rotulo();
+    char instrucao[TAM_LINHA];
 
-    gera_codigo("LABEL", rotulo_inicio);
-
+    gera_rotulo(rotulo_inicio);
+    
     consome(SN, ABRE_PARENTESES);
     
-    // Verifica o tipo da condição.
-    TIPO tipo_condicao = Expr(); // A chamada também gera o código da condição.
+    // Atividade 3: Verifica o tipo da condição.
+    TIPO tipo_condicao = Expr();
     if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
         erro_semantico("A expressao na condicional de um 'while' deve ser booleana ou inteira.", contLinha);
     }
     
     consome(SN, FECHA_PARENTESES);
 
-    gera_codigo("JUMP_FALSE", rotulo_fim); 
+    // Atividade 1: Se a condição for falsa, sai do laço.
+    snprintf(instrucao, sizeof(instrucao), "JUMP_FALSE L%d", rotulo_fim);
+    gera(instrucao);
 
-    Cmd(); // Gera código para o corpo do laço.
+    Cmd();
 
-    gera_codigo("JUMP", rotulo_inicio);
+    // Atividade 1: Volta para o início para reavaliar a condição.
+    snprintf(instrucao, sizeof(instrucao), "JUMP L%d", rotulo_inicio);
+    gera(instrucao);
 
-    gera_codigo("LABEL", rotulo_fim); // Ponto de saída do laço.
+    gera_rotulo(rotulo_fim);
 }
 
 
@@ -332,7 +353,40 @@ void Cmd_return() { consome(RESERVED_WORD, PR_RETURN); if (t.cat != END_EXPRESSI
 void Cmd_break() { consome(RESERVED_WORD, PR_BREAK); consome(END_EXPRESSION, 0); }
 void Cmd_continue() { consome(RESERVED_WORD, PR_CONTINUE); consome(END_EXPRESSION, 0); }
 
-TIPO Expr() { return Expr_atrib(); }
+/**
+ * @brief Analisa um comando de atribuição, realiza a checagem de tipos
+ * e gera o código de máquina de pilha.
+ */
+
+void Cmd_atrib() {
+    SIMBOLO* s = busca_simbolo(&ts, t.lexema);
+    if (s == NULL) {
+        char msg[200];
+        sprintf(msg, "Variavel '%s' nao foi declarada.", t.lexema);
+        erro_semantico(msg, contLinha);
+    }
+    
+    // Guarda o tipo e o nome da variável
+    TIPO tipo_esq = s->tipo;
+    char nome_var[100];
+    strcpy(nome_var, t.lexema);
+    
+    consome(ID, 0); // Consome o ID da variável
+    consome(SN, OP_ATRIBUICAO); // Consome o '='
+    
+    TIPO tipo_dir = Expr();
+    
+    // Verifica a compatibilidade de tipos para a atribuição
+    if (tipo_esq != tipo_dir && !(tipo_esq == INT_ && tipo_dir == CHAR_) && !(tipo_esq == CHAR_ && tipo_dir == INT_)) {
+        erro_semantico("Tipos incompativeis para atribuicao.", contLinha);
+    }
+
+    // Gera a instrução para armazenar o resultado
+    gera_codigo("STORE", nome_var);
+
+    consome(END_EXPRESSION, 0);
+}
+TIPO Expr() { return Expr_ou(); }
 
 TIPO Expr_atrib() {
     TIPO tipo_esq = Expr_ou();
@@ -375,25 +429,34 @@ TIPO Expr_e() {
 
 TIPO Expr_relacional() {
     TIPO tipo_esq = Expr_aditiva();
+
     if (t.cat == SN && (t.codigo >= OP_MAIOR && t.codigo <= OP_DIFERENTE)) {
         int op = t.codigo;
         consome(SN, t.codigo);
         TIPO tipo_dir = Expr_aditiva();
+
         if (tipo_esq != tipo_dir) { 
             erro_semantico("Tipos incompativeis para operacao relacional.", contLinha); 
         }
+
         switch (op) {
-            case OP_IGUAL:       gera_codigo("EQ", NULL); break;
-            case OP_DIFERENTE:   gera_codigo("NE", NULL); break;
-            case OP_MAIOR:       gera_codigo("GT", NULL); break;
-            case OP_MAIOR_IGUAL: gera_codigo("GTE", NULL); break;
-            case OP_MENOR:       gera_codigo("LT", NULL); break;
-            case OP_MENOR_IGUAL: gera_codigo("LTE", NULL); break;
+            case OP_IGUAL:       gera("EQ"); break;
+            case OP_DIFERENTE:   gera("NE"); break;
+            case OP_MAIOR:       gera("GT"); break;
+            case OP_MAIOR_IGUAL: gera("GTE"); break;
+            case OP_MENOR:       gera("LT"); break;
+            case OP_MENOR_IGUAL: gera("LTE"); break;
         }
+        
         return BOOL_;
     }
+    
     return tipo_esq;
 }
+
+/**
+ * @brief Analisa expressões aritméticas e relacionais, checando tipos e gerando código.
+ */
 
 TIPO Expr_aditiva() {
     TIPO tipo_esq = Expr_multiplicativa();
@@ -401,11 +464,15 @@ TIPO Expr_aditiva() {
         int op = t.codigo;
         consome(SN, t.codigo);
         TIPO tipo_dir = Expr_multiplicativa();
-        if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) { 
-            erro_semantico("Tipos incompativeis para operacao de adicao/subtracao (float com int/char).", contLinha);
-            return NA_TIPO; 
+        
+        // Atividade 3: Checagem de compatibilidade de tipos.
+        if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) {
+            erro_semantico("Tipos incompativeis.", contLinha);
         }
-        if (op == OP_SOMA) gera_codigo("ADD", NULL); else gera_codigo("SUB", NULL);
+        
+        // Atividade 2: Gera a instrução aritmética correspondente.
+        if (op == OP_SOMA) gera("ADD"); else gera("SUB");
+        
         if (tipo_esq == REAL_ || tipo_dir == REAL_) tipo_esq = REAL_; 
         else tipo_esq = INT_; 
     }
@@ -438,27 +505,31 @@ TIPO Expr_multiplicativa() {
 TIPO Fator() {
 
     TIPO tipo_retorno = NA_TIPO;
+    char instrucao[100]; 
 
     if (t.cat == ID) {
         SIMBOLO* s = busca_simbolo(&ts, t.lexema);
+        
         if (s == NULL) {
             char msg[200];
             sprintf(msg, "Identificador '%s' nao foi declarado.", t.lexema);
             erro_semantico(msg, contLinha);
-            consome(ID, 0);
-            return NA_TIPO; 
+            consome(ID, 0); // Consome o token para evitar laços infinitos
+            return NA_TIPO;
         }
         
         tipo_retorno = s->tipo;
-        
-        // Instrução apra varregar a variável na pilha
-        gera_codigo("LOAD", t.lexema);
+
+        snprintf(instrucao, sizeof(instrucao), "LOAD %s", t.lexema);
+        gera(instrucao);
 
         char id_usado[100];
         strcpy(id_usado, t.lexema);
         consome(ID, 0);
 
+        // Se o ID é seguido por (
         if (t.cat == SN && t.codigo == ABRE_PARENTESES) { 
+            // Verifica se o símbolo é uma função.
             if (s->categoria != CAT_FUNC && s->categoria != CAT_PROT) {
                 char msg[200];
                 sprintf(msg, "'%s' nao e uma funcao e nao pode ser chamada.", id_usado);
@@ -477,36 +548,34 @@ TIPO Fator() {
         return tipo_retorno;
 
     } else if (t.cat == CT_INT) {
-        char valor_str[20];
-        sprintf(valor_str, "%d", t.int_value);
-
-        gera_codigo("PUSH", valor_str);
-
+        snprintf(instrucao, sizeof(instrucao), "PUSH %d", t.int_value);
+        gera(instrucao);
         consome(t.cat, 0);
-        return INT_;       
+        return INT_;
+
     } else if (t.cat == CT_REAL) { 
-        char valor_str[30];
-        sprintf(valor_str, "%f", t.real_value);
-        gera_codigo("PUSH", valor_str);
+        snprintf(instrucao, sizeof(instrucao), "PUSH %f", t.real_value);
+        gera(instrucao);
         consome(t.cat, 0);
-        
-        return REAL_;        
+        return REAL_;
+
     } else if (t.cat == CT_CHAR) {
-        char valor_str[5];
-        sprintf(valor_str, "%d", t.int_value); 
-        gera_codigo("PUSH", valor_str);
+        snprintf(instrucao, sizeof(instrucao), "PUSH %d", t.int_value); // Empilha o valor ASCII
+        gera(instrucao);
         consome(t.cat, 0);
-        
-        return CHAR_;       
+        return CHAR_;  
 
     } else if (t.cat == SN && t.codigo == ABRE_PARENTESES) {
         consome(SN, ABRE_PARENTESES);
-        TIPO tipo_expr = Expr();
+        tipo_retorno = Expr();
         consome(SN, FECHA_PARENTESES);
-        return tipo_expr;
+        return tipo_retorno;
 
     } else {
         error("Expressao mal formada no fator.");
     }
     return NA_TIPO; 
 }
+
+
+

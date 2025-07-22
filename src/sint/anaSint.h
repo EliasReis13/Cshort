@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include "../lex/anaLex.h"
 #include "../tabela/tabelaSimbolos.h"
+#include "../gerador/geradorCodigo.h"
 
 /**
  * @enum DECL_SINALIZADOR
@@ -39,14 +40,9 @@ typedef enum {
  * arquivo (neste caso, anaSint.c), mas podem ser acessadas por qualquer
  * arquivo que inclua este cabeçalho.
  */
-extern FILE *fd;                // Ponteiro para o arquivo de entrada
-extern TOKEN t;                 // Armazena o token atual
-extern TOKEN tLookahead;        // Armazena o próximo token (para análise preditiva)
-extern char TABS[200];           // Usado para indentar a saída da árvore de análise
-extern int contLinha;           // Contador de linha atual (originário do anaLex)
-extern bool modoPanico;         // Flag que ativa a recuperação de erro
-extern bool houveErroSintatico; // Flag que indica se algum erro ocorreu
-
+extern FILE *fd;
+extern TOKEN t, tLookahead;
+extern bool houveErroSintatico;
 
 // Ponto de entrada e rotinas de alto nível
 void Prog();
@@ -66,6 +62,7 @@ void Cmd_return();
 void Cmd_bloco();
 void Cmd_break();
 void Cmd_continue();
+void Cmd_atrib();
 
 // Análise de Expressões
 TIPO Expr();
