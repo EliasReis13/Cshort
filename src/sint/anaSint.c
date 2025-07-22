@@ -22,6 +22,8 @@ TabelaSimbolos ts;
 bool houveErroSintatico = false;
 char TABS[200] = "";
 
+SIMBOLO* funcao_atual = NULL;
+
 // --- Implementação das Funções Auxiliares ---
 
 /**
@@ -95,15 +97,20 @@ void Prog(char* nomeArquivo) {
         printf("Nao consegui abrir o arquivo '%s'.\n", nomeArquivo);
         exit(1);
     }
+
     ts = inicializa_tabela(); 
     tLookahead = AnaLex(fd);
     nextToken();
+
     while (t.cat != END_FILE) {
-        DECL_SINALIZADOR flag = Decl();
-        if (flag == DECL_FUNC) { corpo_func(); }
+        SIMBOLO* func_simbolo = NULL;
+        DECL_SINALIZADOR flag = Decl(&func_simbolo);
+        if (flag == DECL_FUNC) { 
+            corpo_func(func_simbolo); 
+        }
     }
     imprime_tabela(ts);
-    salvar_codigo_em_arquivo("out/codigo_gerado.maq"); // Salva o código no final
+    salvar_codigo_em_arquivo("out/codigo_gerado.maq"); 
     fclose(fd);
 }
 
@@ -122,13 +129,16 @@ void gera_codigo(char* op, char* arg) {
 }
 
 
-void corpo_func() {
+void corpo_func(SIMBOLO* func_simbolo) {
+    funcao_atual = func_simbolo;
     abre_escopo(&ts);
     Cmd_bloco();
     fecha_escopo(&ts); 
+
+    funcao_atual = NULL;
 }
 
-DECL_SINALIZADOR Decl() {
+DECL_SINALIZADOR Decl(SIMBOLO** func_encontrada) {
     DECL_SINALIZADOR declFlag = NO_DECL;
     if (!Tipo()) {
         error("Esperado um tipo no inicio da declaracao.");
@@ -156,6 +166,8 @@ DECL_SINALIZADOR Decl() {
             sprintf(msg, "Redeclaracao da funcao '%s'.", s.id);
             erro_semantico(msg, contLinha);
         }
+
+        *func_encontrada = busca_simbolo(&ts, nome_id);
 
         nextToken();
         nextToken();
@@ -240,8 +252,11 @@ void Tipos_param(char* nome_funcao) {
 }
 
 void Cmd() {
-    if (Tipo()) { Decl(); }
-    else if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
+    if (Tipo()) { 
+        SIMBOLO* simbolo_local = NULL;
+        Decl(&simbolo_local); 
+        
+    }else if (t.cat == RESERVED_WORD && t.codigo == PR_IF) Cmd_if();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_WHILE) Cmd_while();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_FOR) Cmd_for();
     else if (t.cat == RESERVED_WORD && t.codigo == PR_RETURN) Cmd_return();
@@ -349,7 +364,32 @@ void Cmd_for() {
     consome(SN, FECHA_PARENTESES); Cmd();
 }
 
-void Cmd_return() { consome(RESERVED_WORD, PR_RETURN); if (t.cat != END_EXPRESSION) Expr(); consome(END_EXPRESSION, 0); }
+void Cmd_return() {
+    consome(RESERVED_WORD, PR_RETURN);
+    
+    TIPO tipo_retornado = VOID_; 
+
+    if (t.cat != END_EXPRESSION) {
+        tipo_retornado = Expr(); 
+    }
+
+    // Verificação de Tipos do Retorno
+    if (funcao_atual != NULL) {
+        if (funcao_atual->tipo == VOID_ && tipo_retornado != VOID_) {
+            erro_semantico("Funcao do tipo 'void' nao pode retornar um valor.", contLinha);
+        }
+        else if (funcao_atual->tipo != VOID_ && tipo_retornado == VOID_) {
+            erro_semantico("Funcao nao-void deve retornar um valor.", contLinha);
+        }
+        else if (funcao_atual->tipo != tipo_retornado) {
+            if (!((funcao_atual->tipo == INT_ && tipo_retornado == CHAR_) || (funcao_atual->tipo == CHAR_ && tipo_retornado == INT_))) {
+                erro_semantico("O tipo do valor de retorno e incompativel com o tipo declarado da funcao.", contLinha);
+            }
+        }
+    }
+    
+    consome(END_EXPRESSION, 0);
+}
 void Cmd_break() { consome(RESERVED_WORD, PR_BREAK); consome(END_EXPRESSION, 0); }
 void Cmd_continue() { consome(RESERVED_WORD, PR_CONTINUE); consome(END_EXPRESSION, 0); }
 
@@ -529,23 +569,59 @@ TIPO Fator() {
 
         // Se o ID é seguido por (
         if (t.cat == SN && t.codigo == ABRE_PARENTESES) { 
-            // Verifica se o símbolo é uma função.
+            // Verifica se o símbolo é uma função
             if (s->categoria != CAT_FUNC && s->categoria != CAT_PROT) {
                 char msg[200];
                 sprintf(msg, "'%s' nao e uma funcao e nao pode ser chamada.", id_usado);
                 erro_semantico(msg, contLinha);
             }
             consome(SN, ABRE_PARENTESES);
+
+            int arg_count = 0;
+            TIPO arg_tipos[10]; 
+
             if (t.cat != SN || t.codigo != FECHA_PARENTESES) {
-                Expr();
+                // Analisa o primeiro argumento
+                arg_tipos[arg_count++] = Expr();
+
+                // Analisa os argumentos seguintes
                 while (t.cat == SN && t.codigo == VIRGULA) {
                     consome(SN, VIRGULA);
-                    Expr();
-                }
+                    if (arg_count < 10) {
+                        arg_tipos[arg_count++] = Expr();
+                    } else {
+                        erro_semantico("Numero maximo de argumentos (10) excedido.", contLinha);
+                        Expr(); // Consome a expressão para evitar erros em cascata
+                    }
             }
             consome(SN, FECHA_PARENTESES);
         }
+        if (arg_count != s->info.func.num_parametros) {
+                char msg[200];
+                sprintf(msg, "Numero incorreto de argumentos para a funcao '%s'. Esperado: %d, Fornecido: %d.", 
+                        id_usado, s->info.func.num_parametros, arg_count);
+                erro_semantico(msg, contLinha);
+            } else {
+                // Regra 3.2.2.7.2 (Tipos dos argumentos)
+                for (int i = 0; i < arg_count; i++) {
+                    if (arg_tipos[i] != s->info.func.tipos_parametros[i]) {
+                        // Verificando a compatibilidade int/char
+                        if (!((s->info.func.tipos_parametros[i] == INT_ && arg_tipos[i] == CHAR_) ||
+                              (s->info.func.tipos_parametros[i] == CHAR_ && arg_tipos[i] == INT_))) {
+                            char msg[200];
+                            sprintf(msg, "Tipo do argumento %d incompativel na chamada da funcao '%s'.", i + 1, id_usado);
+                            erro_semantico(msg, contLinha);
+                            break; // Para no primeiro erro de tipo de argumento
+                        }
+                    }
+                }
+            }
+            
+            consome(SN, FECHA_PARENTESES);
+
+        }
         return tipo_retorno;
+
 
     } else if (t.cat == CT_INT) {
         snprintf(instrucao, sizeof(instrucao), "PUSH %d", t.int_value);
