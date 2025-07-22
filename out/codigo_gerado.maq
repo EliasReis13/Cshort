@@ -1,42 +1,16 @@
-PUSH 0
-LOAD calcula_fatorial
-PUSH 5
-LOAD processa_dados
-LOAD fatorial_de_5
-PUSH 0
-LOAD valor_inicial
-L0:
-LOAD g_iteracoes
 PUSH 3
-LT
-JUMP_FALSE L1
-LOAD g_resultado_final
-PUSH 10
-GT
-JUMP_FALSE L2
-LOAD g_resultado_final
-PUSH 2
-JUMP L3
-L2:
-LOAD g_resultado_final
-PUSH 1
-ADD
-L3:
-LOAD g_iteracoes
-PUSH 1
-ADD
-JUMP L0
-L1:
-LOAD n
 PUSH 0
-EQ
-JUMP_FALSE L4
-PUSH 1
-JUMP L5
-L4:
-LOAD n
-LOAD calcula_fatorial
-LOAD n
+L0:
+LOAD i
+PUSH 0
+GT
+JUMP_FALSE L1
+LOAD total
+LOAD i
+ADD
+LOAD i
 PUSH 1
 SUB
-L5:
+JUMP L0
+L1:
+PUSH 0
