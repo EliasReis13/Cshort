@@ -1,9 +1,9 @@
 #!/bin/bash
-echo "🔧 Compilando o compilador completo..."
+
+echo "🔧 Compilando o compilador completo (léxico, sintático, semântico e gerador)..."
+
 mkdir -p bin
 
-# Comando GCC com os caminhos corretos para todos os arquivos .c
-# e a flag -I src para encontrar os cabeçalhos.
 gcc src/main.c \
     src/lex/anaLex.c \
     src/sint/anaSint.c \
@@ -11,6 +11,7 @@ gcc src/main.c \
     src/gerador/geradorCodigo.c \
     -o bin/cshort.out -I src
 
+# Verifica o código de saída do último comando ($?). 0 significa sucesso.
 if [ $? -eq 0 ]; then
     echo "✅ Compilado com sucesso: bin/cshort.out"
 else
