@@ -1,12 +1,6 @@
 /**
  * @file anaSint.h
  * @brief Arquivo de cabeçalho (Interface) do Analisador Sintático.
- *
- * @purpose
- * Este arquivo define a "interface pública" do módulo de análise sintática.
- * Ele contém as definições de tipos, declarações de variáveis globais externas
- * e protótipos de funções que são necessários para que outros módulos (como o main.c)
- * possam interagir com o analisador.
  */
 
 #ifndef ANASINT_H
@@ -21,11 +15,7 @@
 /**
  * @enum DECL_SINALIZADOR
  * @brief Sinaliza o tipo de declaração encontrada pela função Decl().
- *
- * Esta enumeração é usada como um mecanismo de comunicação entre a função Decl() e
- * seu chamador (Prog()). Ela informa se a declaração analisada foi de uma variável,
- * um protótipo de função ou uma definição completa de função, permitindo que o
- * parser saiba se deve ou não esperar um corpo de função `{...}` em seguida.
+ * Usado para a estratégia de análise fatorada que evita backtracking.
  */
 typedef enum {
     NO_DECL,      // Nenhuma declaração válida encontrada
@@ -35,11 +25,6 @@ typedef enum {
 } DECL_SINALIZADOR;
 
 // --- Variáveis Globais Externas ---
-/**
- * A palavra-chave 'extern' indica que estas variáveis são definidas em outro
- * arquivo (neste caso, anaSint.c), mas podem ser acessadas por qualquer
- * arquivo que inclua este cabeçalho.
- */
 extern FILE *fd;
 extern TOKEN t, tLookahead;
 extern bool houveErroSintatico;
@@ -64,7 +49,12 @@ void Cmd_break();
 void Cmd_continue();
 void Cmd_atrib();
 
-// Análise de Expressões
+/**
+ * @brief Protótipos para as funções de análise de expressão.
+ * @note Todas retornam um valor do tipo TIPO. Esta é a base da
+ * Definição Dirigida pela Sintaxe (DDS) para a checagem de tipos.
+ */
+
 TIPO Expr();
 TIPO Expr_atrib();
 TIPO Expr_ou();
