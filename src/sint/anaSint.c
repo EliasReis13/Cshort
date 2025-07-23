@@ -1,12 +1,6 @@
 /**
  * @file anaSint.c
- * @brief Implementação do Analisador Sintático e Semântico.
- *
- * @purpose
- * Este arquivo contém a lógica completa do analisador de descida recursiva.
- * Ele implementa as regras da gramática da linguagem Cshort e integra as
- * ações semânticas, como o gerenciamento de escopo e a checagem de tipos,
- * através da interação com o módulo da Tabela de Símbolos.
+ * @brief Implementação do Analisador Sintático, Semântico e Gerador de Código.
  */
 
 #include <stdio.h>
@@ -77,7 +71,13 @@ int Tipo() {
     return 0;
 }
 
-// Converte um tipo do léxico (PR_INT) para um tipo semântico (INT_)
+/**
+ * @brief Converte um tipo do analisador léxico (ex: PR_INT) para um tipo
+ * semântico da tabela de símbolos (ex: INT_).
+ * @param pr_code O código da palavra reservada de tipo.
+ * @return O tipo semântico correspondente.
+ */
+
 TIPO pr_to_tipo(int pr_code) {
     switch (pr_code) {
         case PR_INT: return INT_;
@@ -89,15 +89,24 @@ TIPO pr_to_tipo(int pr_code) {
     }
 }
 
+/**
+ * @brief Ponto de entrada do analisador. Orquestra todo o processo de compilação.
+ * @param nomeArquivo O caminho para o arquivo .cshort a ser compilado.
+ */
+
 void Prog(char* nomeArquivo) {
     fd = fopen(nomeArquivo, "r");
     if (!fd) {
         printf("Nao consegui abrir o arquivo '%s'.\n", nomeArquivo);
         exit(1);
     }
+
+    // Inicializa os módulos
     ts = inicializa_tabela(); 
     tLookahead = AnaLex(fd);
     nextToken();
+
+    // Laço principal de análise
     while (t.cat != END_FILE) {
         DECL_SINALIZADOR flag = Decl();
         if (flag == DECL_FUNC) { corpo_func(); }
@@ -260,11 +269,15 @@ void Cmd_bloco() {
     consome(SN, FECHA_CHAVE);
 }
 
+/**
+ * @brief Analisa o comando 'if-else', verifica o tipo da condição e gera código de desvio.
+ */
+
 void Cmd_if() {
     consome(RESERVED_WORD, PR_IF);
     consome(SN, ABRE_PARENTESES);
 
-    // Atividade 3: DDS que verifica o tipo da expressão
+    // DDS para verificação de tipo: garante que a condição seja booleana ou inteira.
     TIPO tipo_condicao = Expr(); // A chamada a Expr() também gera o código para a condição
     if (tipo_condicao != BOOL_ && tipo_condicao != INT_) {
         erro_semantico("A expressao na condicional de um 'if' deve ser do tipo booleano ou inteiro.", contLinha);
@@ -272,11 +285,12 @@ void Cmd_if() {
 
     consome(SN, FECHA_PARENTESES);
 
-    // Atividade 1: Esquema de tradução para if/if-else.
+    // Esquema de tradução para if/if-else
     int rotulo_else = novo_rotulo();
     int rotulo_fim;
     char instrucao[TAM_LINHA];
 
+    // Gera o salto incondicional para pular o bloco else
     snprintf(instrucao, sizeof(instrucao), "JUMP_FALSE L%d", rotulo_else);
     gera(instrucao);
 
@@ -459,20 +473,25 @@ TIPO Expr_relacional() {
  */
 
 TIPO Expr_aditiva() {
+    // Analisa o operando esquerdo
     TIPO tipo_esq = Expr_multiplicativa();
+
     while (t.cat == SN && (t.codigo == OP_SOMA || t.codigo == OP_SUBTRACAO)) {
         int op = t.codigo;
         consome(SN, t.codigo);
+
+        // Analisa o operando direito 
         TIPO tipo_dir = Expr_multiplicativa();
         
-        // Atividade 3: Checagem de compatibilidade de tipos.
+        // Atividade 3: Checagem de compatibilidade de tipos
         if ((tipo_esq == REAL_ && tipo_dir != REAL_) || (tipo_esq != REAL_ && tipo_dir == REAL_)) {
             erro_semantico("Tipos incompativeis.", contLinha);
         }
         
-        // Atividade 2: Gera a instrução aritmética correspondente.
+        // Atividade 2: Gera a instrução aritmética correspondente
         if (op == OP_SOMA) gera("ADD"); else gera("SUB");
         
+        // DDS: Determina o tipo do resultado
         if (tipo_esq == REAL_ || tipo_dir == REAL_) tipo_esq = REAL_; 
         else tipo_esq = INT_; 
     }
