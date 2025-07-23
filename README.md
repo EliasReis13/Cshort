@@ -1,12 +1,15 @@
 # 🔍 Compilador da Linguagem Cshort
 
-Este projeto implementa um **compilador** para a linguagem fictícia **Cshort**, conforme as especificações presentes nos documentos `Especificação Cshort-v1.0.pdf` e `Implementação  de alguns Módulos do ASDR de Cshort.pdf`.
+Este projeto implementa um compilador para a linguagem fictícia **Cshort**, conforme as especificações presentes no documento `Doc/Especificação Cshort-v1.0.pdf`.
+
+O compilador realiza a análise completa do código-fonte (front-end) e gera código intermediário para uma máquina de pilha (início do back-end).
 
 Atualmente, estão implementadas as fases de:
-- ✅ Análise Léxica
-- ✅ Análise Sintática
-- ✅ Tabela de Símbolos
-- 🛠️ Em desenvolvimento: Análise Semântica
+- ✅ **Análise Léxica**: Reconhecimento de todos os tokens da linguagem.
+- ✅ **Análise Sintática**: Validação da estrutura gramatical do código.
+- ✅ **Tabela de Símbolos**: Gerenciamento de escopo (global/local) e de identificadores.
+- ✅ **Análise Semântica (DDS)**: Verificação de declarações e compatibilidade de tipos em expressões e comandos.
+- ✅ **Geração de Código Intermediário**: Tradução de comandos e expressões para código de máquina de pilha.
 
 ---
 
@@ -14,12 +17,11 @@ Atualmente, estão implementadas as fases de:
 
 A linguagem **Cshort** é uma linguagem estruturada inspirada em C. Sua gramática é descrita em BNF estendida, e ela oferece suporte a:
 
-- Tipos primitivos: `int`, `float`, `char`, `bool`, `string`
-- Declarações de variáveis, vetores e funções
-- Controle de fluxo: `if`, `else`, `while`, `for`
-- Operadores aritméticos, relacionais, lógicos e de atribuição
-- Literais: inteiros, reais, caracteres e strings
-- Comentários multilinha: `/* ... */`
+- **Tipos primitivos**: `int`, `float`, `char`, `bool`, `void`.
+- **Declarações**: Variáveis globais/locais, protótipos e definições de funções.
+- **Estruturas de Controle**: `if-else`, `while`, `for`.
+- **Operadores**: Aritméticos (`+`, `-`, `*`, `/`), relacionais (`>`, `==`, etc.) e lógicos (`&&`, `||`).
+- **Comentários**: `/* ... */` e `// ...` (se implementado no léxico).
 
 ---
 
@@ -46,6 +48,9 @@ Cshort/
 ├── out/                    # Saídas do compilador
 │   └── tokens.txt
 ├── src/                    # Código-fonte
+│   ├── gerador/            # Módulo do Gerador de Código
+│   │   ├── geradorCodigo.c
+│   │   └── geradorCodigo.h
 │   ├── main.c              # Main do compilador completo
 │   ├── lex/                # Analisador léxico
 │   │   ├── anaLex.c
@@ -73,82 +78,81 @@ Cshort/
 
 | Caminho                          | Descrição                                       |
 |----------------------------------|-------------------------------------------------|
-| `src/lex/anaLex.c`               | Implementação do analisador léxico             |
-| `src/lex/anaLex.h`               | Definições de tokens e protótipos              |
-| `src/lex/main.c`                 | Main de teste apenas do léxico                 |
-| `src/sint/anaSint.c`             | Implementação do analisador sintático          |
-| `src/sint/anaSint.h`             | Cabeçalhos do analisador sintático             |
-| `src/sint/main.c`                | Teste isolado da análise sintática             |
-| `src/tabela/tabelaSimbolos.c`    | Implementação da tabela de símbolos            |
-| `src/tabela/tabelaSimbolos.h`    | Interface da tabela de símbolos                |
-| `src/main.c`                     | Main geral do compilador                       |
-| `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows          |
-| `test/*.cshort`                  | Casos de teste válidos e com erros léxicos     |
-| `out/tokens.txt`                 | Resultado da análise léxica                    |
-| `AFD/`                           | Representações gráficas do autômato            |
-| `Doc/`                           | Documentação da linguagem                      |
-| `bin/`                           | Executáveis gerados pelos scripts              |
-| `.vscode/tasks.json`             | 	Configuração de tarefas para o VSCode         |
+| `src/gerador/geradorCodigo.c`    | Gerador de código                               |
+| `src/gerador/geradorCodigo.h`    | Cabeçalho do Gerador                            |
+| `src/lex/anaLex.c`               | Implementação do analisador léxico              |
+| `src/lex/anaLex.h`               | Definições de tokens e protótipos               |
+| `src/lex/main.c`                 | Main de teste apenas do léxico                  |
+| `src/sint/anaSint.c`             | Implementação do analisador sintático           |
+| `src/sint/anaSint.h`             | Cabeçalhos do analisador sintático              |
+| `src/sint/main.c`                | Teste isolado da análise sintática              |
+| `src/tabela/tabelaSimbolos.c`    | Implementação da tabela de símbolos             | 
+| `src/tabela/tabelaSimbolos.h`    | Interface da tabela de símbolos                 |
+| `src/main.c`                     | Main geral do compilador                        |
+| `build/compile_*.sh / .bat`      | Scripts de build para Linux e Windows           |
+| `test/*.cshort`                  | Casos de teste válidos e com erros léxicos      |
+| `out/tokens.txt`                 | Resultado da análise léxica                     |
+| `AFD/`                           | Representações gráficas do autômato             |
+| `Doc/`                           | Documentação da linguagem                       |
+| `bin/`                           | Executáveis gerados pelos scripts               |
+| `.vscode/tasks.json`             | 	Configuração de tarefas para o VSCode          |
 
+
+## ⚙️ Funcionalidades Implementadas
+
+### Análise Léxica (`src/lex/`)
+- Reconhece todos os tokens da linguagem, incluindo palavras-chave, identificadores, constantes numéricas, caracteres, strings e operadores.
+- Trata corretamente comentários de bloco e conta as linhas para reportar erros com precisão.
+
+### Tabela de Símbolos (`src/tabela/`)
+- Implementada como uma pilha para gerenciar escopos aninhados (`global` e `local`) de forma eficiente.
+- Armazena informações detalhadas sobre cada símbolo, como seu nome, tipo, categoria (variável, função) e escopo.
+- Fornece a base para toda a análise semântica.
+
+### Análise Sintática e Semântica (`src/sint/`)
+- Utiliza um parser de descida recursiva para validar a estrutura do código Cshort.
+- **Definição Dirigida pela Sintaxe (DDS) para Análise Semântica:**
+  - **Gerenciamento de Escopo:** Utiliza a tabela de símbolos para gerenciar escopos `global` e `local`, permitindo o sombreamento de variáveis.
+  - **Verificação de Declarações:** Garante que identificadores não sejam redeclarados no mesmo escopo e que sejam declarados antes do uso.
+  - **Checagem de Tipos:** Valida a compatibilidade de tipos em:
+    - **Expressões Aritméticas:** Verifica se operandos de `+`, `-`, `*`, `/` são compatíveis (ex: `int` com `char`, `float` com `float`).
+    - **Expressões Relacionais/Lógicas:** Verifica os operandos e garante que o resultado seja `bool`.
+    - **Comandos Condicionais:** Assegura que as condições em `if`, `while` e `for` resultem em um tipo `bool` (ou `int`).
+    - **Atribuições:** Verifica se o tipo da expressão do lado direito é compatível com a variável do lado esquerdo.
+
+### Geração de Código Intermediário(`src/gerador/`)
+- O compilador traduz o código Cshort para uma representação de baixo nível para uma **Máquina de Pilha**.
+- **Esquemas de Tradução Implementados:**
+  - **Expressões Aritméticas:** Gera instruções LOAD (para variáveis), PUSH (para constantes) e ADD, SUB, MUL, DIV para os cálculos.  
+  - **Expressões Condicionais:** Gera instruções de comparação como GT (maior que), LT (menor que), EQ (igual), etc.
+  - **Estruturas de Controle:** Gera a lógica de desvio com rótulos e saltos (JUMP, JUMP_FALSE) para os comandos if-else e while.
+- O código gerado é salvo em um arquivo de saída (ex: out/codigo_gerado.maq) para posterior simulação ou compilação.
 
 
 ## ▶️ Como Compilar e Executar
 
+Utilize os scripts na pasta `build/` a partir da raiz do projeto.
+
+
 ### 🐧 Linux/macOS
 
-#### Compilar e executar o compilador completo:
 ```bash
+# Para compilar
 ./build/compile_all.sh
-```
 
-#### Compilar e executar apenas o analisador léxico isolado:
-```bash
-./build/compile_lex.sh
+# Para executar com um arquivo de teste
+./bin/cshort.out test/teste_sem_erros.cshort
 ```
 
 ### 🪟 Windows
 
-#### Compilar e executar o compilador completo:
 
 ```cmd
-build\compile_all.bat
-```
+REM Para compilar
+.\build\compile_all.bat
 
-#### Compilar e executar apenas o analisador léxico isolado:
-
-```cmd
-build\compile_lex.bat
-```
-
-## 🧪 Exemplo de Saída
-
-Para a entrada em Cshort:
-
-```c
-int main() {
-    char c = 'a';
-    int x = 10;
-}
-```
-A saída será semalhante a:
-
-```c
-<ID, main>
-<ABRE_PARENTESES, (>
-<FECHA_PARENTESES, )>
-<ABRE_CHAVE, {>
-<PR_CHAR, 5>
-<ID, c>
-<OP_ATRIBUICAO, 5>
-<CT_CHAR, 'a'>
-<END_EXPR, ;>
-<PR_INT, 3>
-<ID, x>
-<OP_ATRIBUICAO, 5>
-<CT_INT, 10>
-<END_EXPR, ;>
-<FECHA_CHAVE, }>
-<EOF>
+REM Para executar com um arquivo de teste
+bin\cshort.exe test\teste_sem_erros.cshort
 ```
 
 ## ✅ Componentes
@@ -161,7 +165,7 @@ A saída será semalhante a:
 
 ### Analisador Sintático
 
-- Caminho: src/sint/anaSint.c ou anaSint_expandido.c
+- Caminho: src/sint/anaSint.c 
 - Entrada: sequência de tokens
 - Saída: árvore sintática com identação
 
